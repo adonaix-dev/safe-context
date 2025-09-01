@@ -5,6 +5,7 @@ import type { AnyFunction, MaybeArray } from "@adonaix/types";
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMulticontext } from "~/Disposable/DisposableMulticontext";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
+import type { SafeContextError } from "~/Error/SafeContextError";
 import type { ArgEntries } from "~/Types/Arguments/ArgEntries";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
@@ -70,9 +71,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: Dictionary[keyof Dictionary],
         options?: ContextSetOptions,
     ): boolean {
-        return (this.#asyncLocalStorage.getStore() ?? this.#registry)
-            .getEntry(key)
-            .set(context, options);
+        try {
+            return (this.#asyncLocalStorage.getStore() ?? this.#registry)
+                .getEntry(key)
+                .set(context, options);
+        } catch (error: unknown) {
+            throw (error as SafeContextError).formatWithKey(key as string);
+        }
     }
 
     #setMulticontext(
@@ -82,10 +87,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
         const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
 
         return Object.fromEntries<MulticontextSetReturn<Dictionary>>(
-            Object.entries(arg).map(([key, context]) => [
-                key,
-                registry.getEntry(key).set(context, options?.[key]),
-            ]),
+            Object.entries(arg).map(([key, context]) => {
+                try {
+                    return [key, registry.getEntry(key).set(context, options?.[key])];
+                } catch (error: unknown) {
+                    throw (error as SafeContextError).formatWithKey(key as string);
+                }
+            }),
         );
     }
 
@@ -113,11 +121,15 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: Dictionary[keyof Dictionary],
         options?: ContextSetOptions,
     ): DisposableContext<Dictionary[keyof Dictionary]> {
-        return new DisposableContext(
-            (this.#asyncLocalStorage.getStore() ?? this.#registry).getEntry(key),
-            context,
-            options,
-        );
+        try {
+            return new DisposableContext(
+                (this.#asyncLocalStorage.getStore() ?? this.#registry).getEntry(key),
+                context,
+                options,
+            );
+        } catch (error: unknown) {
+            throw (error as SafeContextError).formatWithKey(key as string);
+        }
     }
 
     #withMulticontext(
@@ -165,10 +177,3 @@ class SafeContext<Dictionary extends ContextDictionary> {
 }
 
 export { SafeContext };
-
-interface RunzyContext {
-    anonymousRegistry: { anonymous(fn: AnyFunction): string };
-    random: { shuffle(array: any[]): any[] };
-}
-
-const runzyContext = new SafeContext<RunzyContext>();

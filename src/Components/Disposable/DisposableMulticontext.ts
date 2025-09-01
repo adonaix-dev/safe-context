@@ -1,3 +1,4 @@
+import type { SafeContextError } from "~/Error/SafeContextError";
 import type { ArgEntries } from "~/Types/Arguments/ArgEntries";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { MulticontextScope } from "~/Types/MulticontextScope";
@@ -16,10 +17,18 @@ class DisposableMulticontext<Arg extends ContextDictionary> implements Disposabl
     ) {
         this.scope = Object.fromEntries(
             Object.entries(entries).map(([key, entry]) => {
-                const disposable = new DisposableContext(entry, arg[key], options?.[key]);
+                try {
+                    const disposable = new DisposableContext(
+                        entry,
+                        arg[key],
+                        options?.[key],
+                    );
 
-                this.#stack.use(disposable);
-                return [key, disposable];
+                    this.#stack.use(disposable);
+                    return [key, disposable];
+                } catch (error: unknown) {
+                    throw (error as SafeContextError).formatWithKey(key as string);
+                }
             }),
         ) as any;
     }

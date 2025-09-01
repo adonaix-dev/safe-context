@@ -1,6 +1,7 @@
 import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
 
 import { ContextEntryState } from "./ContextEntryState";
+import { FinalOverrideError } from "./Error/FinalOverrideError";
 import type { ContextEntrySetOptions } from "./Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "./Types/ContextEntrySnapshot";
 
@@ -30,7 +31,7 @@ class ContextEntry<Type> {
         if (this.state === ContextEntryState.Set) {
             if (!override) return false;
             else if (this.final && !force) {
-                // must fail saying that cannot write to final values
+                throw new FinalOverrideError();
             }
         }
 
