@@ -1,4 +1,3 @@
-import type { MulticontextSetArgument } from "~/Types/Arguments/MulticontextSetArgument";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 
 import type { ContextSetOptions } from "./ContextSetOptions";
