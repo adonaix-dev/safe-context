@@ -15,21 +15,23 @@ class DisposableMulticontext<Arg extends ContextDictionary> implements Disposabl
         entries: ArgEntries<Arg>,
         options?: MulticontextSetOptions<Arg>,
     ) {
-        this.scope = Object.fromEntries(
-            Object.entries(entries).map(([key, entry]) => {
-                try {
-                    const disposable = new DisposableContext(
-                        entry,
-                        arg[key],
-                        options?.[key],
-                    );
+        this.scope = Object.freeze(
+            Object.fromEntries(
+                Object.entries(entries).map(([key, entry]) => {
+                    try {
+                        const disposable = new DisposableContext(
+                            entry,
+                            arg[key],
+                            options?.[key],
+                        );
 
-                    this.#stack.use(disposable);
-                    return [key, disposable];
-                } catch (error: unknown) {
-                    throw (error as SafeContextError).formatWithKey(key as string);
-                }
-            }),
+                        this.#stack.use(disposable);
+                        return [key, disposable];
+                    } catch (error: unknown) {
+                        throw (error as SafeContextError).formatWithKey(key as string);
+                    }
+                }),
+            ),
         ) as any;
     }
 
