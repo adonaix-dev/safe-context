@@ -2,6 +2,7 @@ import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
 
 import { ContextEntryState } from "./ContextEntryState";
 import type { ContextEntrySetOptions } from "./Types/ContextEntrySetOptions";
+import type { ContextEntrySnapshot } from "./Types/ContextEntrySnapshot";
 
 class ContextEntry<Type> {
     state: ContextEntryState = ContextEntryState.Unset;
@@ -44,6 +45,15 @@ class ContextEntry<Type> {
         this.state = ContextEntryState.Unset;
         this.final = false;
         delete this.context;
+    }
+
+    snapshot(): ContextEntrySnapshot<Type> | undefined {
+        if (this.state === ContextEntryState.Set) {
+            return {
+                context: this.context!,
+                final: this.final,
+            };
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 
-type MulticontextSetReturn<Dictionary extends ContextDictionary> = {
-    [Key in keyof Dictionary]: boolean;
+type MulticontextSetReturn<Arg extends ContextDictionary> = {
+    [Key in keyof Arg]: boolean;
 };
 
 export type { MulticontextSetReturn };

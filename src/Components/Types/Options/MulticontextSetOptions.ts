@@ -2,8 +2,8 @@ import type { ContextDictionary } from "~/Types/ContextDictionary";
 
 import type { ContextSetOptions } from "./ContextSetOptions";
 
-type MulticontextSetOptions<Argument extends ContextDictionary> = {
-    [Key in keyof Argument]?: ContextSetOptions;
+type MulticontextSetOptions<Arg extends ContextDictionary> = {
+    [Key in keyof Arg]?: ContextSetOptions;
 };
 
 export type { MulticontextSetOptions };
