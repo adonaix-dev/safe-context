@@ -1,6 +1,6 @@
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 
-import type { ContextWithReturn } from "./ContextWithReturn";
+import type { ContextWithReturn } from "./Return/ContextWithReturn";
 
 type MulticontextScope<Dictionary extends ContextDictionary> = {
     [Key in keyof Dictionary]: ContextWithReturn<Dictionary[Key]>;
