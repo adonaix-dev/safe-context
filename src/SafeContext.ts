@@ -1,12 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { AnyFunction, MaybeArray } from "@adonaix/types";
-
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMulticontext } from "~/Disposable/DisposableMulticontext";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
+import { isGetContextArgs } from "~/Util/IsGetContextArgs";
+import { isSetContextArgs } from "~/Util/IsSetContextArgs";
 import type { SafeContextError } from "~/Error/SafeContextError";
-import type { ArgEntries } from "~/Types/Arguments/ArgEntries";
+import type { GetArgs } from "~/Types/Args/GetArgs";
+import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
 import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
@@ -29,17 +30,14 @@ class SafeContext<Dictionary extends ContextDictionary> {
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
         new AsyncLocalStorage();
 
-    #getContext(
-        key: keyof Dictionary,
-        options?: ContextGetOptions<any>,
-    ): ContextGetReturn<any, any> {
+    #get(key: string, options?: ContextGetOptions<any>): ContextGetReturn<any, any> {
         return (this.#asyncLocalStorage.getStore() ?? this.#registry)
             .getEntry(key)
             .get(options);
     }
 
-    #getMulticontext(
-        contexts: (keyof Dictionary)[],
+    #getMultiple(
+        contexts: string[],
         options?: MulticontextGetOptions<any, any>,
     ): MulticontextGetReturn<any, any, any> {
         const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
@@ -57,31 +55,22 @@ class SafeContext<Dictionary extends ContextDictionary> {
         Key extends keyof Dictionary,
         Options extends MulticontextGetOptions<Dictionary, Key>,
     >(keys: Key[], options?: Options): MulticontextGetReturn<Dictionary, Key, Options>;
-    get(
-        keyOrKeys: MaybeArray<keyof Dictionary>,
-        maybeOptions: ContextGetOptions<any> | MulticontextGetOptions<any, any>,
-    ): any {
-        return typeof keyOrKeys === "string"
-            ? this.#getContext(keyOrKeys, maybeOptions)
-            : this.#getMulticontext(keyOrKeys as any, maybeOptions as any);
+    get(...args: GetArgs): any {
+        return isGetContextArgs(args) ? this.#get(...args) : this.#getMultiple(...args);
     }
 
-    #setContext(
-        key: keyof Dictionary,
-        context: Dictionary[keyof Dictionary],
-        options?: ContextSetOptions,
-    ): boolean {
+    #set(key: string, context: any, options?: ContextSetOptions): boolean {
         try {
             return (this.#asyncLocalStorage.getStore() ?? this.#registry)
                 .getEntry(key)
                 .set(context, options);
         } catch (error: unknown) {
-            throw (error as SafeContextError).formatWithKey(key as string);
+            throw (error as SafeContextError).formatWithKey(key);
         }
     }
 
-    #setMulticontext(
-        arg: Dictionary,
+    #setMultiple(
+        arg: ContextDictionary,
         options?: MulticontextSetOptions<any>,
     ): MulticontextSetReturn<Dictionary> {
         const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
@@ -91,7 +80,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 try {
                     return [key, registry.getEntry(key).set(context, options?.[key])];
                 } catch (error: unknown) {
-                    throw (error as SafeContextError).formatWithKey(key as string);
+                    throw (error as SafeContextError).formatWithKey(key);
                 }
             }),
         );
@@ -102,25 +91,19 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: Dictionary[Key],
         options?: ContextSetOptions,
     ): boolean;
-    set<Arg extends Dictionary>(
+    set<Arg extends Partial<Dictionary>>(
         arg: Arg,
         options?: MulticontextSetOptions<Arg>,
     ): MulticontextSetReturn<Arg>;
-    set(
-        keyOrArg: keyof Dictionary | Dictionary,
-        contextOrOptions: Dictionary[keyof Dictionary] | MulticontextSetOptions<any>,
-        maybeOptions?: ContextSetOptions,
-    ): any {
-        return typeof keyOrArg === "string"
-            ? this.#setContext(keyOrArg, contextOrOptions as any, maybeOptions)
-            : this.#setMulticontext(keyOrArg as any, contextOrOptions as any);
+    set(...args: SetArgs): any {
+        return isSetContextArgs(args) ? this.#set(...args) : this.#setMultiple(...args);
     }
 
-    #withContext(
-        key: keyof Dictionary,
-        context: Dictionary[keyof Dictionary],
+    #with(
+        key: string,
+        context: any,
         options?: ContextSetOptions,
-    ): DisposableContext<Dictionary[keyof Dictionary]> {
+    ): DisposableContext<any> {
         try {
             return new DisposableContext(
                 (
@@ -130,19 +113,19 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 options,
             );
         } catch (error: unknown) {
-            throw (error as SafeContextError).formatWithKey(key as string);
+            throw (error as SafeContextError).formatWithKey(key);
         }
     }
 
-    #withMulticontext(
-        arg: Dictionary,
+    #withMultiple(
+        arg: ContextDictionary,
         options?: MulticontextSetOptions<any>,
-    ): DisposableMulticontext<Dictionary> {
+    ): DisposableMulticontext<any> {
         const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
 
         return new DisposableMulticontext(
             arg,
-            Object.fromEntries<ArgEntries<Dictionary>>(
+            Object.fromEntries(
                 Object.keys(arg).map((key) => [
                     key,
                     registry.getEntryWithinThisRegistry(key),
@@ -157,18 +140,12 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: Dictionary[Key],
         options?: ContextSetOptions,
     ): DisposableContext<Dictionary[Key]>;
-    with<Arg extends Dictionary>(
+    with<Arg extends Partial<Dictionary>>(
         arg: Arg,
         options?: MulticontextSetOptions<Arg>,
     ): DisposableMulticontext<Arg>;
-    with(
-        keyOrArg: keyof Dictionary | Dictionary,
-        contextOrOptions: Dictionary[keyof Dictionary] | MulticontextSetOptions<any>,
-        maybeOptions?: ContextSetOptions,
-    ): any {
-        return typeof keyOrArg === "string"
-            ? this.#withContext(keyOrArg, contextOrOptions as any, maybeOptions)
-            : this.#withMulticontext(keyOrArg as any, contextOrOptions);
+    with(...args: SetArgs): any {
+        return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
     }
 
     concurrentlySafe<T>(callback: () => T): T {
