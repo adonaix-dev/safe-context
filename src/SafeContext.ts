@@ -147,10 +147,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     concurrentlySafe<T>(callback: () => T): T {
-        const storage = this.#asyncLocalStorage;
-
-        return storage.run(
-            new ContextRegistry(storage.getStore() ?? this.#registry),
+        return this.#asyncLocalStorage.run(
+            new ContextRegistry(this.#getRegistry()),
             callback,
         );
     }
