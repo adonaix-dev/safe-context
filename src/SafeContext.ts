@@ -123,7 +123,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
     ): DisposableContext<Dictionary[keyof Dictionary]> {
         try {
             return new DisposableContext(
-                (this.#asyncLocalStorage.getStore() ?? this.#registry).getEntry(key),
+                (
+                    this.#asyncLocalStorage.getStore() ?? this.#registry
+                ).getEntryWithinThisRegistry(key),
                 context,
                 options,
             );
@@ -141,7 +143,10 @@ class SafeContext<Dictionary extends ContextDictionary> {
         return new DisposableMulticontext(
             arg,
             Object.fromEntries<ArgEntries<Dictionary>>(
-                Object.keys(arg).map((key) => [key, registry.getEntry(key)]),
+                Object.keys(arg).map((key) => [
+                    key,
+                    registry.getEntryWithinThisRegistry(key),
+                ]),
             ),
             options,
         );

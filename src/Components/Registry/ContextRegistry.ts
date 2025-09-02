@@ -17,7 +17,7 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         key: Key,
     ): ContextEntry<Dictionary[Key]> | undefined {
         if (this.registryMap.has(key)) {
-            return this.registryMap.get(key) as any;
+            return this.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
         }
         return this.parentRegistry?.getExistingEntry(key);
     }
@@ -29,6 +29,19 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         }
 
         const entry = new ContextEntry<Dictionary[Key]>();
+
+        this.registryMap.set(key, entry);
+        return entry;
+    }
+
+    getEntryWithinThisRegistry<Key extends keyof Dictionary>(
+        key: Key,
+    ): ContextEntry<Dictionary[Key]> {
+        if (this.registryMap.has(key)) {
+            return this.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
+        }
+
+        const entry = this.getExistingEntry(key)?.copy() ?? new ContextEntry();
 
         this.registryMap.set(key, entry);
         return entry;

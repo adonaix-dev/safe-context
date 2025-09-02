@@ -56,6 +56,16 @@ class ContextEntry<Type> {
             };
         }
     }
+
+    copy(): ContextEntry<Type> {
+        const entry = new ContextEntry<Type>();
+
+        entry.state = this.state;
+        entry.final = this.final;
+        entry.context = this.context;
+
+        return entry;
+    }
 }
 
 export { ContextEntry };
