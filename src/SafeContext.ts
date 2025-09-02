@@ -30,17 +30,19 @@ class SafeContext<Dictionary extends ContextDictionary> {
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
         new AsyncLocalStorage();
 
+    #getRegistry(): ContextRegistry<Dictionary> {
+        return this.#asyncLocalStorage.getStore() ?? this.#registry;
+    }
+
     #get(key: string, options?: ContextGetOptions<any>): ContextGetReturn<any, any> {
-        return (this.#asyncLocalStorage.getStore() ?? this.#registry)
-            .getEntry(key)
-            .get(options);
+        return this.#getRegistry().getEntry(key).get(options);
     }
 
     #getMultiple(
         contexts: string[],
         options?: MulticontextGetOptions<any, any>,
     ): MulticontextGetReturn<any, any, any> {
-        const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
+        const registry = this.#getRegistry();
 
         return Object.fromEntries(
             contexts.map((key) => [key, registry.getEntry(key).get(options?.[key])]),
@@ -61,9 +63,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     #set(key: string, context: any, options?: ContextSetOptions): boolean {
         try {
-            return (this.#asyncLocalStorage.getStore() ?? this.#registry)
-                .getEntry(key)
-                .set(context, options);
+            return this.#getRegistry().getEntry(key).set(context, options);
         } catch (error: unknown) {
             throw (error as SafeContextError).formatWithKey(key);
         }
@@ -73,7 +73,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         arg: ContextDictionary,
         options?: MulticontextSetOptions<any>,
     ): MulticontextSetReturn<Dictionary> {
-        const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
+        const registry = this.#getRegistry();
 
         return Object.fromEntries<MulticontextSetReturn<Dictionary>>(
             Object.entries(arg).map(([key, context]) => {
@@ -106,9 +106,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     ): DisposableContext<any> {
         try {
             return new DisposableContext(
-                (
-                    this.#asyncLocalStorage.getStore() ?? this.#registry
-                ).getEntryWithinThisRegistry(key),
+                this.#getRegistry().getEntryWithinThisRegistry(key),
                 context,
                 options,
             );
@@ -121,7 +119,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         arg: ContextDictionary,
         options?: MulticontextSetOptions<any>,
     ): DisposableMulticontext<any> {
-        const registry = this.#asyncLocalStorage.getStore() ?? this.#registry;
+        const registry = this.#getRegistry();
 
         return new DisposableMulticontext(
             arg,
