@@ -2,7 +2,7 @@
     "extends": "adonaix-lib/tsconfig.json",
     "compilerOptions": {
         "lib": [
-            "esnext"
+            "es2023"
         ],
         "target": "es2023",
         "paths": {
