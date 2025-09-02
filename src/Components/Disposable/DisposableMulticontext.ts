@@ -5,6 +5,7 @@ import type { MulticontextScope } from "~/Types/MulticontextScope";
 import type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOptions";
 
 import { DisposableContext } from "./DisposableContext";
+import { DisposableStack } from "./Stack/DisposableStack";
 
 class DisposableMulticontext<Arg extends ContextDictionary> implements Disposable {
     readonly #stack = new DisposableStack();
