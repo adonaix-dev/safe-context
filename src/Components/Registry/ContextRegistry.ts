@@ -1,4 +1,3 @@
-import type { Context } from "~/Types/Context";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 
 import { ContextEntry } from "./Entry/ContextEntry";
@@ -6,7 +5,7 @@ import { ContextEntry } from "./Entry/ContextEntry";
 class ContextRegistry<Dictionary extends ContextDictionary> {
     private readonly registryMap: Map<
         keyof Dictionary,
-        ContextEntry<Context<Dictionary>>
+        ContextEntry<Dictionary[keyof Dictionary]>
     > = new Map();
 
     constructor(
