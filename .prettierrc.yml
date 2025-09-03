@@ -11,6 +11,8 @@ plugins:
   - "@ianvs/prettier-plugin-sort-imports"
   - "prettier-plugin-jsdoc"
   - "prettier-plugin-pkg"
+jsdocCommentLineStrategy: "multiline"
+jsdocPrintWidth: 70
 jsdocSeparateReturnsFromParam: true
 tsdoc: true
 importOrder:
