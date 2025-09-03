@@ -9,6 +9,7 @@ import type { SafeContextError } from "~/Error/SafeContextError";
 import type { GetArgs } from "~/Types/Args/GetArgs";
 import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
+import type { ConcurrentlySafeOptions } from "~/Types/Options/ConcurrentlySafeOptions";
 import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
 import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
 import type { MulticontextGetOptions } from "~/Types/Options/MulticontextGetOptions";
@@ -17,13 +18,7 @@ import type { ContextGetReturn } from "~/Types/Return/ContextGetReturn";
 import type { MulticontextGetReturn } from "~/Types/Return/MulticontextGetReturn";
 import type { MulticontextSetReturn } from "~/Types/Return/MulticontextSetReturn";
 
-declare global {
-    interface ObjectConstructor {
-        entries<T>(object: T): [keyof T, T[keyof T]][];
-        keys<T>(object: T): (keyof T)[];
-        fromEntries<T>(entries: Iterable<readonly [keyof T, T[keyof T]]>): T;
-    }
-}
+const { entries, fromEntries, keys } = Object;
 
 class SafeContext<Dictionary extends ContextDictionary> {
     readonly #registry: ContextRegistry<Dictionary> = new ContextRegistry();
@@ -35,7 +30,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     #get(key: string, options?: ContextGetOptions<any>): ContextGetReturn<any, any> {
-        return this.#getRegistry().getEntry(key).get(options);
+        return this.#getRegistry().getAsGlobalAsPossibleEntry(key).get(options);
     }
 
     #getMultiple(
@@ -44,8 +39,11 @@ class SafeContext<Dictionary extends ContextDictionary> {
     ): MulticontextGetReturn<any, any, any> {
         const registry = this.#getRegistry();
 
-        return Object.fromEntries(
-            contexts.map((key) => [key, registry.getEntry(key).get(options?.[key])]),
+        return fromEntries(
+            contexts.map((key) => [
+                key,
+                registry.getAsGlobalAsPossibleEntry(key).get(options?.[key]),
+            ]),
         );
     }
 
@@ -63,7 +61,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     #set(key: string, context: any, options?: ContextSetOptions): boolean {
         try {
-            return this.#getRegistry().getEntry(key).set(context, options);
+            return this.#getRegistry()
+                .getAsGlobalAsPossibleEntry(key)
+                .set(context, options);
         } catch (error: unknown) {
             throw (error as SafeContextError).formatWithKey(key);
         }
@@ -72,13 +72,18 @@ class SafeContext<Dictionary extends ContextDictionary> {
     #setMultiple(
         arg: ContextDictionary,
         options?: MulticontextSetOptions<any>,
-    ): MulticontextSetReturn<Dictionary> {
+    ): MulticontextSetReturn<any> {
         const registry = this.#getRegistry();
 
-        return Object.fromEntries<MulticontextSetReturn<Dictionary>>(
-            Object.entries(arg).map(([key, context]) => {
+        return fromEntries(
+            entries(arg).map(([key, context]) => {
                 try {
-                    return [key, registry.getEntry(key).set(context, options?.[key])];
+                    return [
+                        key,
+                        registry
+                            .getAsGlobalAsPossibleEntry(key)
+                            .set(context, options?.[key]),
+                    ];
                 } catch (error: unknown) {
                     throw (error as SafeContextError).formatWithKey(key);
                 }
@@ -123,11 +128,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
         return new DisposableMulticontext(
             arg,
-            Object.fromEntries(
-                Object.keys(arg).map((key) => [
-                    key,
-                    registry.getEntryWithinThisRegistry(key),
-                ]),
+            fromEntries(
+                keys(arg).map((key) => [key, registry.getEntryWithinThisRegistry(key)]),
             ),
             options,
         );
@@ -146,10 +148,21 @@ class SafeContext<Dictionary extends ContextDictionary> {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
     }
 
-    concurrentlySafe<T>(callback: () => T): T {
+    concurrentlySafe<T>(
+        callback: () => T,
+        options?: ConcurrentlySafeOptions<Dictionary>,
+    ): T {
         return this.#asyncLocalStorage.run(
-            new ContextRegistry(this.#getRegistry()),
-            callback,
+            new ContextRegistry(this.#getRegistry(), this.#registry),
+            () => {
+                const registry = this.#getRegistry();
+
+                options?.contexts?.forEach(
+                    (context) => void registry.getEntryWithinThisRegistry(context),
+                );
+
+                return callback();
+            },
         );
     }
 }
