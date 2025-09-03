@@ -33,19 +33,7 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
 
         const entry = new ContextEntry<Dictionary[Key]>();
 
-        this.mainRegistry.registryMap.set(key, entry);
-        return entry;
-    }
-
-    getEntry<Key extends keyof Dictionary>(key: Key): ContextEntry<Dictionary[Key]> {
-        const existingEntry = this.getExistingEntry(key);
-        if (existingEntry) {
-            return existingEntry;
-        }
-
-        const entry = new ContextEntry<Dictionary[Key]>();
-
-        this.registryMap.set(key, entry);
+        this.rootRegistry.registryMap.set(key, entry);
         return entry;
     }
 
