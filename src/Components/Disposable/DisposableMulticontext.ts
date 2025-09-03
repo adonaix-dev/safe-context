@@ -7,18 +7,20 @@ import type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOpti
 import { DisposableContext } from "./DisposableContext";
 import { DisposableStack } from "./Stack/DisposableStack";
 
+const { entries, freeze, fromEntries } = Object;
+
 class DisposableMulticontext<Arg extends ContextDictionary> implements Disposable {
     readonly #stack = new DisposableStack();
     readonly scope: MulticontextScope<Arg>;
 
     constructor(
         arg: Arg,
-        entries: ArgEntries<Arg>,
+        argEntries: ArgEntries<Arg>,
         options?: MulticontextSetOptions<Arg>,
     ) {
-        this.scope = Object.freeze(
-            Object.fromEntries(
-                Object.entries(entries).map(([key, entry]) => {
+        this.scope = freeze(
+            fromEntries(
+                entries(argEntries).map(([key, entry]) => {
                     try {
                         const disposable = new DisposableContext(
                             entry,
@@ -29,6 +31,7 @@ class DisposableMulticontext<Arg extends ContextDictionary> implements Disposabl
                         this.#stack.use(disposable);
                         return [key, disposable];
                     } catch (error: unknown) {
+                        this.#stack.dispose();
                         throw (error as SafeContextError).formatWithKey(key as string);
                     }
                 }),

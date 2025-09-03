@@ -150,16 +150,18 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     concurrentlySafe<T>(
         callback: () => T,
-        options?: ConcurrentlySafeOptions<Dictionary>,
+        options: ConcurrentlySafeOptions<Dictionary> = {},
     ): T {
         return this.#asyncLocalStorage.run(
             new ContextRegistry(this.#getRegistry(), this.#registry),
             () => {
                 const registry = this.#getRegistry();
+                const { contexts } = options;
 
-                options?.contexts?.forEach(
-                    (context) => void registry.getEntryWithinThisRegistry(context),
-                );
+                const keys = contexts === "all" ? registry.getAllKeys() : contexts;
+                keys?.forEach((key) => {
+                    void registry.getEntryWithinThisRegistry(key);
+                });
 
                 return callback();
             },
