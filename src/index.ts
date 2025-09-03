@@ -3,14 +3,14 @@ export type { DisposableMulticontext } from "~/Disposable/DisposableMulticontext
 
 export type { ContextDictionary } from "~/Types/ContextDictionary";
 
-export type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
-export type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
-export type { MulticontextGetOptions } from "~/Types/Options/MulticontextGetOptions";
-export type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOptions";
+export type { GetContextOptions } from "~/Types/Options/GetContextOptions";
+export type { SetContextOptions } from "~/Types/Options/SetContextOptions";
+export type { GetMultipleContextOptions } from "~/Types/Options/GetMultipleContextOptions";
+export type { SetMultipleContextOptions } from "~/Types/Options/SetMultipleContextOptions";
 
-export type { ContextGetReturn } from "~/Types/Return/ContextGetReturn";
-export type { MulticontextGetReturn } from "~/Types/Return/MulticontextGetReturn";
-export type { MulticontextSetReturn } from "~/Types/Return/MulticontextSetReturn";
+export type { GetContextReturn } from "~/Types/Return/GetContextReturn";
+export type { GetMultipleContextReturn } from "~/Types/Return/GetMultipleContextReturn";
+export type { SetMultipleContextReturn } from "~/Types/Return/SetMultipleContextReturn";
 
 export { SuppressedError } from "~/Disposable/Stack/Error/SuppressedError";
 

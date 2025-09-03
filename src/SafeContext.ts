@@ -10,13 +10,13 @@ import type { GetArgs } from "~/Types/Args/GetArgs";
 import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { ConcurrentlySafeOptions } from "~/Types/Options/ConcurrentlySafeOptions";
-import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
-import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
-import type { MulticontextGetOptions } from "~/Types/Options/MulticontextGetOptions";
-import type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOptions";
-import type { ContextGetReturn } from "~/Types/Return/ContextGetReturn";
-import type { MulticontextGetReturn } from "~/Types/Return/MulticontextGetReturn";
-import type { MulticontextSetReturn } from "~/Types/Return/MulticontextSetReturn";
+import type { GetContextOptions } from "~/Types/Options/GetContextOptions";
+import type { GetMultipleContextOptions } from "~/Types/Options/GetMultipleContextOptions";
+import type { SetContextOptions } from "~/Types/Options/SetContextOptions";
+import type { SetMultipleContextOptions } from "~/Types/Options/SetMultipleContextOptions";
+import type { GetContextReturn } from "~/Types/Return/GetContextReturn";
+import type { GetMultipleContextReturn } from "~/Types/Return/GetMultipleContextReturn";
+import type { SetMultipleContextReturn } from "~/Types/Return/SetMultipleContextReturn";
 
 const { entries, fromEntries, keys } = Object;
 
@@ -29,14 +29,14 @@ class SafeContext<Dictionary extends ContextDictionary> {
         return this.#asyncLocalStorage.getStore() ?? this.#registry;
     }
 
-    #get(key: string, options?: ContextGetOptions<any>): ContextGetReturn<any, any> {
+    #get(key: string, options?: GetContextOptions<any>): GetContextReturn<any, any> {
         return this.#getRegistry().getAsGlobalAsPossibleEntry(key).get(options);
     }
 
     #getMultiple(
         contexts: string[],
-        options?: MulticontextGetOptions<any, any>,
-    ): MulticontextGetReturn<any, any, any> {
+        options?: GetMultipleContextOptions<any, any>,
+    ): GetMultipleContextReturn<any, any, any> {
         const registry = this.#getRegistry();
 
         return fromEntries(
@@ -47,19 +47,19 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
     }
 
-    get<Key extends keyof Dictionary, Options extends ContextGetOptions<Dictionary[Key]>>(
+    get<Key extends keyof Dictionary, Options extends GetContextOptions<Dictionary[Key]>>(
         key: Key,
         options?: Options,
-    ): ContextGetReturn<Dictionary[Key], Options>;
+    ): GetContextReturn<Dictionary[Key], Options>;
     get<
         Key extends keyof Dictionary,
-        Options extends MulticontextGetOptions<Dictionary, Key>,
-    >(keys: Key[], options?: Options): MulticontextGetReturn<Dictionary, Key, Options>;
+        Options extends GetMultipleContextOptions<Dictionary, Key>,
+    >(keys: Key[], options?: Options): GetMultipleContextReturn<Dictionary, Key, Options>;
     get(...args: GetArgs): any {
         return isGetContextArgs(args) ? this.#get(...args) : this.#getMultiple(...args);
     }
 
-    #set(key: string, context: any, options?: ContextSetOptions): boolean {
+    #set(key: string, context: any, options?: SetContextOptions): boolean {
         try {
             return this.#getRegistry()
                 .getAsGlobalAsPossibleEntry(key)
@@ -71,8 +71,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     #setMultiple(
         arg: ContextDictionary,
-        options?: MulticontextSetOptions<any>,
-    ): MulticontextSetReturn<any> {
+        options?: SetMultipleContextOptions<any>,
+    ): SetMultipleContextReturn<any> {
         const registry = this.#getRegistry();
 
         return fromEntries(
@@ -94,12 +94,12 @@ class SafeContext<Dictionary extends ContextDictionary> {
     set<Key extends keyof Dictionary>(
         key: Key,
         context: Dictionary[Key],
-        options?: ContextSetOptions,
+        options?: SetContextOptions,
     ): boolean;
     set<Arg extends Partial<Dictionary>>(
         arg: Arg,
-        options?: MulticontextSetOptions<Arg>,
-    ): MulticontextSetReturn<Arg>;
+        options?: SetMultipleContextOptions<Arg>,
+    ): SetMultipleContextReturn<Arg>;
     set(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#set(...args) : this.#setMultiple(...args);
     }
@@ -107,7 +107,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     #with(
         key: string,
         context: any,
-        options?: ContextSetOptions,
+        options?: SetContextOptions,
     ): DisposableContext<any> {
         try {
             return new DisposableContext(
@@ -122,7 +122,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     #withMultiple(
         arg: ContextDictionary,
-        options?: MulticontextSetOptions<any>,
+        options?: SetMultipleContextOptions<any>,
     ): DisposableMulticontext<any> {
         const registry = this.#getRegistry();
 
@@ -138,11 +138,11 @@ class SafeContext<Dictionary extends ContextDictionary> {
     with<Key extends keyof Dictionary>(
         key: Key,
         context: Dictionary[Key],
-        options?: ContextSetOptions,
+        options?: SetContextOptions,
     ): DisposableContext<Dictionary[Key]>;
     with<Arg extends Partial<Dictionary>>(
         arg: Arg,
-        options?: MulticontextSetOptions<Arg>,
+        options?: SetMultipleContextOptions<Arg>,
     ): DisposableMulticontext<Arg>;
     with(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);

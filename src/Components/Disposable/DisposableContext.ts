@@ -1,7 +1,7 @@
 import { ContextEntryState } from "~/Registry/Entry/ContextEntryState";
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextEntrySnapshot } from "~/Registry/Entry/Types/ContextEntrySnapshot";
-import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
+import type { SetContextOptions } from "~/Types/Options/SetContextOptions";
 import type { ContextWithReturn } from "~/Types/Return/ContextWithReturn";
 
 class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
@@ -22,7 +22,7 @@ class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
     constructor(
         entry: ContextEntry<Type>,
         readonly context: Type,
-        options?: ContextSetOptions,
+        options?: SetContextOptions,
     ) {
         this.#previouslySet = entry.state === ContextEntryState.Set;
         this.#snapshot = entry.snapshot();

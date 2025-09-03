@@ -1,4 +1,4 @@
-import type { ContextGetOptions } from "~/Types/Options/ContextGetOptions";
+import type { GetContextOptions } from "~/Types/Options/GetContextOptions";
 
 import { ContextEntryState } from "./ContextEntryState";
 import { FinalOverrideError } from "./Error/FinalOverrideError";
@@ -10,7 +10,7 @@ class ContextEntry<Type> {
     private context?: Type;
     private final: boolean = false;
 
-    get(options: ContextGetOptions<Type> = {}): Type | undefined {
+    get(options: GetContextOptions<Type> = {}): Type | undefined {
         if (
             this.state === ContextEntryState.Unset &&
             typeof options.supply === "function"

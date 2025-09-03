@@ -2,7 +2,7 @@ import type { SafeContextError } from "~/Error/SafeContextError";
 import type { ArgEntries } from "~/Types/Args/ArgEntries";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { MulticontextScope } from "~/Types/MulticontextScope";
-import type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOptions";
+import type { SetMultipleContextOptions } from "~/Types/Options/SetMultipleContextOptions";
 
 import { DisposableContext } from "./DisposableContext";
 import { DisposableStack } from "./Stack/DisposableStack";
@@ -16,7 +16,7 @@ class DisposableMulticontext<Arg extends ContextDictionary> implements Disposabl
     constructor(
         arg: Arg,
         argEntries: ArgEntries<Arg>,
-        options?: MulticontextSetOptions<Arg>,
+        options?: SetMultipleContextOptions<Arg>,
     ) {
         this.scope = freeze(
             fromEntries(

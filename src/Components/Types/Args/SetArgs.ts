@@ -1,11 +1,11 @@
 import type { ContextDictionary } from "~/Types/ContextDictionary";
-import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
-import type { MulticontextSetOptions } from "~/Types/Options/MulticontextSetOptions";
+import type { SetContextOptions } from "~/Types/Options/SetContextOptions";
+import type { SetMultipleContextOptions } from "~/Types/Options/SetMultipleContextOptions";
 
-type SetContextArgs = [string, any, options?: ContextSetOptions];
+type SetContextArgs = [string, any, options?: SetContextOptions];
 type SetMulticontextArgs = [
     ContextDictionary,
-    options?: MulticontextSetOptions<ContextDictionary>,
+    options?: SetMultipleContextOptions<ContextDictionary>,
 ];
 
 type SetArgs = SetContextArgs | SetMulticontextArgs;

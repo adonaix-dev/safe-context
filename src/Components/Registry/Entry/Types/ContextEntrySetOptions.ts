@@ -1,6 +1,6 @@
-import type { ContextSetOptions } from "~/Types/Options/ContextSetOptions";
+import type { SetContextOptions } from "~/Types/Options/SetContextOptions";
 
-interface ContextEntrySetOptions extends ContextSetOptions {
+interface ContextEntrySetOptions extends SetContextOptions {
     force?: boolean;
 }
 
