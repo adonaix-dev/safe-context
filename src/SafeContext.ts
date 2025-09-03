@@ -158,10 +158,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 const registry = this.#getRegistry();
                 const { contexts } = options;
 
-                const keys = contexts === "all" ? registry.getAllKeys() : contexts;
-                keys?.forEach((key) => {
-                    void registry.getEntryWithinThisRegistry(key);
-                });
+                (contexts === "all" ? registry.getAllKeys() : contexts)?.forEach(
+                    (key) => void registry.getEntryWithinThisRegistry(key),
+                );
 
                 return callback();
             },
