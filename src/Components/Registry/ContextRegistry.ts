@@ -49,10 +49,10 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         return entry;
     }
 
-    getAllKeys(): Set<keyof Dictionary> {
+    getCurrentKeys(): Set<keyof Dictionary> {
         const keys = new Set(this.registryMap.keys());
 
-        this.parent?.getAllKeys()?.forEach((key) => keys.add(key));
+        this.parent?.getCurrentKeys()?.forEach((key) => keys.add(key));
         return keys;
     }
 }
