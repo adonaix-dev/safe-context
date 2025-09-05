@@ -1,17 +1,22 @@
 import type { SafeContextError } from "~/Error/SafeContextError";
 import type { ArgEntries } from "~/Types/Args/ArgEntries";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
-import type { MulticontextScope } from "~/Types/MulticontextScope";
-import type { SetMultipleContextOptions } from "~/Types/Options/SetMultipleContextOptions";
+import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
+import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
+import type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextScope";
 
 import { DisposableContext } from "./DisposableContext";
 import { DisposableStack } from "./Stack/DisposableStack";
 
 const { entries, freeze, fromEntries } = Object;
 
-class DisposableMulticontext<Arg extends ContextDictionary> implements Disposable {
+class DisposableMultipleContext<
+    Arg extends ContextDictionary,
+    Options extends WithMultipleContextOptions<Arg>,
+> implements Disposable
+{
     readonly #stack = new DisposableStack();
-    readonly scope: MulticontextScope<Arg>;
+    readonly scope: WithMultipleContextScope<Arg, Options>;
 
     constructor(
         arg: Arg,
@@ -44,4 +49,4 @@ class DisposableMulticontext<Arg extends ContextDictionary> implements Disposabl
     }
 }
 
-export { DisposableMulticontext };
+export { DisposableMultipleContext };

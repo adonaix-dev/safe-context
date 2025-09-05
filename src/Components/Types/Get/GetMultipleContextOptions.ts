@@ -2,11 +2,8 @@ import type { ContextDictionary } from "~/Types/ContextDictionary";
 
 import type { GetContextOptions } from "./GetContextOptions";
 
-type GetMultipleContextOptions<
-    Dictionary extends ContextDictionary,
-    Keys extends keyof Dictionary,
-> = {
-    [Key in Keys]?: GetContextOptions<Dictionary[Key]>;
+type GetMultipleContextOptions<PartialContext extends ContextDictionary> = {
+    [Key in keyof PartialContext]?: GetContextOptions<PartialContext[Key]>;
 };
 
 export type { GetMultipleContextOptions };

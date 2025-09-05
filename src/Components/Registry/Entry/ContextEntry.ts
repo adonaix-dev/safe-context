@@ -1,4 +1,4 @@
-import type { GetContextOptions } from "~/Types/Options/GetContextOptions";
+import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
 
 import { ContextEntryState } from "./ContextEntryState";
 import { FinalOverrideError } from "./Error/FinalOverrideError";
@@ -6,7 +6,7 @@ import type { ContextEntrySetOptions } from "./Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "./Types/ContextEntrySnapshot";
 
 class ContextEntry<Type> {
-    state: ContextEntryState = ContextEntryState.Unset;
+    private state: ContextEntryState = ContextEntryState.Unset;
     private context?: Type;
     private final: boolean = false;
 

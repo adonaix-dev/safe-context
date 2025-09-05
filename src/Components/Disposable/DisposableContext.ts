@@ -1,13 +1,14 @@
-import { ContextEntryState } from "~/Registry/Entry/ContextEntryState";
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextEntrySnapshot } from "~/Registry/Entry/Types/ContextEntrySnapshot";
-import type { SetContextOptions } from "~/Types/Options/SetContextOptions";
-import type { ContextWithReturn } from "~/Types/Return/ContextWithReturn";
+import type { SetContextOptions } from "~/Types/Set/SetContextOptions";
+import type { WithContextChanged } from "~/Types/With/WithContextChanged";
+import type { WithContextOptions } from "~/Types/With/WithContextOptions";
+import type { WithContextReturn } from "~/Types/With/WithContextReturn";
 
-class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
-    readonly #previouslySet: boolean;
+class DisposableContext<Type, Options extends WithContextOptions>
+    implements Disposable, WithContextReturn<Type, Options>
+{
     readonly #snapshot?: ContextEntrySnapshot<Type>;
-
     readonly #entry: ContextEntry<Type>;
     readonly #changed: boolean;
 
@@ -15,8 +16,8 @@ class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
         return this.#snapshot?.context;
     }
 
-    get changed(): boolean {
-        return this.#changed;
+    get changed(): WithContextChanged<Options> {
+        return this.#changed as any;
     }
 
     constructor(
@@ -24,7 +25,6 @@ class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
         readonly context: Type,
         options?: SetContextOptions,
     ) {
-        this.#previouslySet = entry.state === ContextEntryState.Set;
         this.#snapshot = entry.snapshot();
         this.#entry = entry;
         this.#changed = entry.set(context, options);
@@ -32,9 +32,9 @@ class DisposableContext<Type> implements Disposable, ContextWithReturn<Type> {
 
     [Symbol.dispose](): void {
         if (this.#changed) {
-            if (this.#previouslySet) {
-                this.#entry.set(this.#snapshot!.context, {
-                    final: this.#snapshot!.final,
+            if (this.#snapshot) {
+                this.#entry.set(this.#snapshot.context, {
+                    final: this.#snapshot.final,
                     force: true,
                 });
             } else {

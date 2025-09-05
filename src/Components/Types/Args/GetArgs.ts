@@ -1,12 +1,8 @@
-import type { ContextDictionary } from "~/Types/ContextDictionary";
-import type { GetContextOptions } from "~/Types/Options/GetContextOptions";
-import type { GetMultipleContextOptions } from "~/Types/Options/GetMultipleContextOptions";
+import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
+import type { GetMultipleContextOptions } from "~/Types/Get/GetMultipleContextOptions";
 
-type GetContextArgs = [string, options?: GetContextOptions<ContextDictionary>];
-type GetMulticontextArgs = [
-    string[],
-    options?: GetMultipleContextOptions<ContextDictionary, string>,
-];
+type GetContextArgs = [string, options?: GetContextOptions<any>];
+type GetMulticontextArgs = [string[], options?: GetMultipleContextOptions<any>];
 
 type GetArgs = GetContextArgs | GetMulticontextArgs;
 
