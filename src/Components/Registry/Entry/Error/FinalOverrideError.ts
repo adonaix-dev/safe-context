@@ -10,7 +10,7 @@ class FinalOverrideError extends SafeContextError {
 
     override formatWithKey(key: string): this {
         return (
-            (this.message = `cannot set context with key ${key}. This context is set and marked as final, and final contexts cannot be overriden`),
+            (this.message = `cannot set context with key '${key}'. This context is set and marked as final, and final contexts cannot be overriden`),
             this
         );
     }
