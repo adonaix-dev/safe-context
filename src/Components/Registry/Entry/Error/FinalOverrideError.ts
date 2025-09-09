@@ -1,5 +1,5 @@
-import { SafeContextErrorCode } from "~/Error/Code/SafeContextErrorCode";
 import { SafeContextError } from "~/Error/SafeContextError";
+import { SafeContextErrorCode } from "~/Error/SafeContextErrorCode";
 
 class FinalOverrideError extends SafeContextError {
     override name = "FinalOverrideError";

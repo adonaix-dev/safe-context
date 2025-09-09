@@ -1,4 +1,4 @@
-import type { SafeContextErrorCode } from "./Code/SafeContextErrorCode";
+import type { SafeContextErrorCode } from "./SafeContextErrorCode";
 
 abstract class SafeContextError extends Error {
     override name = "SafeContextError";
