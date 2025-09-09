@@ -1,6 +1,4 @@
-import type { GetContextOptions } from "./GetContextOptions";
-
-type GetContextReturn<Type, Options extends GetContextOptions<Type>> = Options extends {
+type GetContextReturn<Type, Options> = Options extends {
     supply: any;
 }
     ? Type

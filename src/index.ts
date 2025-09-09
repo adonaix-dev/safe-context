@@ -15,7 +15,7 @@ export type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContex
 export { SuppressedError } from "~/Disposable/Stack/Error/SuppressedError";
 
 export { SafeContextError } from "~/Error/SafeContextError";
-export { SafeContextErrorCode } from "~/Error/Code/SafeContextErrorCode";
+export { SafeContextErrorCode } from "~/Error/SafeContextErrorCode";
 
 export { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
 

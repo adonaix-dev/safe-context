@@ -1,6 +1,4 @@
-import type { SetContextOptions } from "./SetContextOptions";
-
-type SetContextReturn<Options extends SetContextOptions> = Options extends {
+type SetContextReturn<Options> = Options extends {
     override: false;
 }
     ? boolean

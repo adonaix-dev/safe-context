@@ -149,10 +149,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     with<
         Arg extends Partial<Dictionary>,
         Options extends WithMultipleContextOptions<Arg>,
-    >(
-        arg: Arg,
-        options?: WithMultipleContextOptions<Arg>,
-    ): DisposableMultipleContext<Arg, Options>;
+    >(arg: Arg, options?: Options): DisposableMultipleContext<Arg, Options>;
     with(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
     }

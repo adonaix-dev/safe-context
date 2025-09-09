@@ -1,8 +1,6 @@
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 
-import type { WithContextOptions } from "./WithContextOptions";
-
-interface WithContextReturn<Type, Options extends WithContextOptions> {
+interface WithContextReturn<Type, Options> {
     context: Type;
     changed: WithContextChanged<Options>;
     previous?: Type;
