@@ -2,10 +2,11 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
+import { MissingDependencyError } from "~/Error/MissingDependencyError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
+import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
 import { isGetContextArgs } from "~/Util/IsGetContextArgs";
 import { isSetContextArgs } from "~/Util/IsSetContextArgs";
-import type { SafeContextError } from "~/Error/SafeContextError";
 import type { GetArgs } from "~/Types/Args/GetArgs";
 import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ConcurrentlySafeOptions } from "~/Types/ConcurrentlySafeOptions";
@@ -20,8 +21,6 @@ import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOp
 import type { SetMultipleContextReturn } from "~/Types/Set/SetMultipleContextReturn";
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
-
-const { entries, fromEntries, keys } = Object;
 
 class SafeContext<Dictionary extends ContextDictionary> {
     readonly #registry: ContextRegistry<Dictionary> = new ContextRegistry();
@@ -42,7 +41,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     ): GetMultipleContextReturn<any, any> {
         const registry = this.#getRegistry();
 
-        return fromEntries(
+        return Object.fromEntries(
             contexts.map((key) => [
                 key,
                 registry.getAsGlobalAsPossibleEntry(key).get(options?.[key]),
@@ -71,7 +70,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 .getAsGlobalAsPossibleEntry(key)
                 .set(context, options);
         } catch (error: unknown) {
-            throw (error as SafeContextError).formatWithKey(key);
+            throw error instanceof FinalOverrideError ? error.withKey(key) : error;
         }
     }
 
@@ -81,8 +80,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
     ): SetMultipleContextReturn<any, any> {
         const registry = this.#getRegistry();
 
-        return fromEntries(
-            entries(arg).map(([key, context]) => {
+        return Object.fromEntries(
+            Object.entries(arg).map(([key, context]) => {
                 try {
                     return [
                         key,
@@ -91,7 +90,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
                             .set(context, options?.[key]),
                     ];
                 } catch (error: unknown) {
-                    throw (error as SafeContextError).formatWithKey(key);
+                    throw error instanceof FinalOverrideError
+                        ? error.withKey(key)
+                        : error;
                 }
             }),
         );
@@ -115,6 +116,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: any,
         options?: SetContextOptions,
     ): DisposableContext<any, any> {
+        MissingDependencyError.assert("Symbol.dispose");
+
         try {
             return new DisposableContext(
                 this.#getRegistry().getEntryWithinThisRegistry(key),
@@ -122,7 +125,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 options,
             );
         } catch (error: unknown) {
-            throw (error as SafeContextError).formatWithKey(key);
+            throw error instanceof FinalOverrideError ? error.withKey(key) : error;
         }
     }
 
@@ -130,12 +133,17 @@ class SafeContext<Dictionary extends ContextDictionary> {
         arg: ContextDictionary,
         options?: SetMultipleContextOptions<any>,
     ): DisposableMultipleContext<any, any> {
+        MissingDependencyError.assert("Symbol.dispose", "DisposableStack");
+
         const registry = this.#getRegistry();
 
         return new DisposableMultipleContext(
             arg,
-            fromEntries(
-                keys(arg).map((key) => [key, registry.getEntryWithinThisRegistry(key)]),
+            Object.fromEntries(
+                Object.keys(arg).map((key) => [
+                    key,
+                    registry.getEntryWithinThisRegistry(key),
+                ]),
             ),
             options,
         );
