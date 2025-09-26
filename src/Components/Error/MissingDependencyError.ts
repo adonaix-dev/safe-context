@@ -24,11 +24,14 @@ function getGlobalThis(): typeof globalThis | undefined {
 class MissingDependencyError extends SafeContextError {
     override name = "MissingDependencyError";
 
-    static #findDependency(dependency: string, target: any): ReferenceError | null {
+    static #findDependency(
+        dependency: string,
+        target: typeof globalThis
+    ): ReferenceError | null {
         const dependencyParts = dependency.split(".");
 
         for (const part of dependencyParts) {
-            target = target[part];
+            target = (target as any)[part];
 
             if (typeof target === "undefined") {
                 return new ReferenceError(
@@ -62,19 +65,16 @@ class MissingDependencyError extends SafeContextError {
     }
 
     private constructor(entries: [string, ReferenceError][]) {
-        const [entry, ...other] = entries as [
-            [string, ReferenceError],
-            ...[string, ReferenceError][],
-        ];
+        const hasMany = entries.length > 1;
+        const [dependency, error] = !hasMany && entries[0] || [];
 
-        const isUnique = !other.length;
-        const message = isUnique
-            ? `required dependency '${entry[0]}' could not be found ìn the current environment`
-            : `required dependencies ${entries.map(([dependency]) => `'${dependency}'`).join(", ")} could not be found ìn the current environment`;
+        const message = hasMany
+            ? `required dependencies ${entries.map(([dependency]) => `'${dependency}'`).join(", ")} could not be found ìn the current environment`
+            : `required dependency '${dependency!}' could not be found ìn the current environment`;
 
-        const cause: Error = isUnique
-            ? entry[1]
-            : new AggregateError(entries.map(([, error]) => error));
+        const cause = hasMany
+            ? new AggregateError(entries.map(([, error]) => error))
+            : error!;
 
         super(message, { cause });
     }
