@@ -66,11 +66,11 @@ class MissingDependencyError extends SafeContextError {
 
     private constructor(entries: [string, ReferenceError][]) {
         const hasMany = entries.length > 1;
-        const [dependency, error] = !hasMany && entries[0] || [];
+        const [dependency, error] = !hasMany ? entries[0] : [];
 
         const message = hasMany
-            ? `required dependencies ${entries.map(([dependency]) => `'${dependency}'`).join(", ")} could not be found ìn the current environment`
-            : `required dependency '${dependency!}' could not be found ìn the current environment`;
+            ? `required dependencies ${entries.map(([dependency]) => `'${dependency}'`).join(", ")} could not be found in the current environment`
+            : `required dependency '${dependency!}' could not be found in the current environment`;
 
         const cause = hasMany
             ? new AggregateError(entries.map(([, error]) => error))
