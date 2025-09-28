@@ -65,10 +65,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     #set(key: string, context: any, options?: SetContextOptions): boolean {
+        const registry = this.#getRegistry();
+        const entry = options?.local
+            ? registry.getLocalEntry(key)
+            : registry.getAsGlobalAsPossibleEntry(key);
+
         try {
-            return this.#getRegistry()
-                .getAsGlobalAsPossibleEntry(key)
-                .set(context, { ...(options ?? {}), force: false });
+            return entry.set(context, { ...(options ?? {}), force: false });
         } catch (error: unknown) {
             throw error instanceof FinalOverrideError ? error.withKey(key) : error;
         }
@@ -82,12 +85,14 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
         return Object.fromEntries(
             Object.entries(arg).map(([key, context]) => {
+                const entry = options?.[key]?.local
+                    ? registry.getLocalEntry(key)
+                    : registry.getAsGlobalAsPossibleEntry(key);
+
                 try {
                     return [
                         key,
-                        registry
-                            .getAsGlobalAsPossibleEntry(key)
-                            .set(context, { ...(options?.[key] ?? {}), force: false }),
+                        entry.set(context, { ...(options?.[key] ?? {}), force: false }),
                     ];
                 } catch (error: unknown) {
                     throw error instanceof FinalOverrideError
@@ -120,7 +125,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
         try {
             return new DisposableContext(
-                this.#getRegistry().getEntryWithinThisRegistry(key),
+                this.#getRegistry().getLocalEntry(key),
                 context,
                 { ...(options ?? {}), force: false },
             );
@@ -140,10 +145,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         return new DisposableMultipleContext(
             arg,
             Object.fromEntries(
-                Object.keys(arg).map((key) => [
-                    key,
-                    registry.getEntryWithinThisRegistry(key),
-                ]),
+                Object.keys(arg).map((key) => [key, registry.getLocalEntry(key)]),
             ),
             options,
         );
@@ -173,7 +175,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 const { contexts } = options;
 
                 (contexts === "current" ? registry.getCurrentKeys() : contexts)?.forEach(
-                    (key) => void registry.getEntryWithinThisRegistry(key),
+                    (key) => void registry.getLocalEntry(key),
                 );
 
                 return callback();

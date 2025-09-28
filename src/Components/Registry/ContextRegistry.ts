@@ -10,7 +10,7 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
 
     constructor(
         private readonly parent?: ContextRegistry<Dictionary>,
-        private readonly rootRegistry: ContextRegistry<Dictionary> = this,
+        private readonly globalRegistry: ContextRegistry<Dictionary> = this,
     ) {}
 
     private getExistingEntry<Key extends keyof Dictionary>(
@@ -32,11 +32,11 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
 
         const entry = new ContextEntry<Dictionary[Key]>();
 
-        this.rootRegistry.registryMap.set(key, entry);
+        this.globalRegistry.registryMap.set(key, entry);
         return entry;
     }
 
-    getEntryWithinThisRegistry<Key extends keyof Dictionary>(
+    getLocalEntry<Key extends keyof Dictionary>(
         key: Key,
     ): ContextEntry<Dictionary[Key]> {
         if (this.registryMap.has(key)) {
