@@ -68,7 +68,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         try {
             return this.#getRegistry()
                 .getAsGlobalAsPossibleEntry(key)
-                .set(context, options);
+                .set(context, { ...(options ?? {}), force: false });
         } catch (error: unknown) {
             throw error instanceof FinalOverrideError ? error.withKey(key) : error;
         }
@@ -87,7 +87,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                         key,
                         registry
                             .getAsGlobalAsPossibleEntry(key)
-                            .set(context, options?.[key]),
+                            .set(context, { ...(options?.[key] ?? {}), force: false }),
                     ];
                 } catch (error: unknown) {
                     throw error instanceof FinalOverrideError
@@ -122,7 +122,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
             return new DisposableContext(
                 this.#getRegistry().getEntryWithinThisRegistry(key),
                 context,
-                options,
+                { ...(options ?? {}), force: false },
             );
         } catch (error: unknown) {
             throw error instanceof FinalOverrideError ? error.withKey(key) : error;

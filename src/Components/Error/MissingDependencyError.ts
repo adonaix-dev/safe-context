@@ -26,7 +26,7 @@ class MissingDependencyError extends SafeContextError {
 
     static #findDependency(
         dependency: string,
-        target: typeof globalThis
+        target: typeof globalThis,
     ): ReferenceError | null {
         const dependencyParts = dependency.split(".");
 
@@ -66,7 +66,7 @@ class MissingDependencyError extends SafeContextError {
 
     private constructor(entries: [string, ReferenceError][]) {
         const hasMany = entries.length > 1;
-        const [dependency, error] = !hasMany ? entries[0] : [];
+        const [dependency, error] = !hasMany ? entries[0]! : [];
 
         const message = hasMany
             ? `required dependencies ${entries.map(([dependency]) => `'${dependency}'`).join(", ")} could not be found in the current environment`

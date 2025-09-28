@@ -1,4 +1,5 @@
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
+import type { ContextEntrySetOptions } from "~/Registry/Entry/Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "~/Registry/Entry/Types/ContextEntrySnapshot";
 import type { SetContextOptions } from "~/Types/Set/SetContextOptions";
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
@@ -23,7 +24,7 @@ class DisposableContext<Type, Options extends WithContextOptions>
     constructor(
         entry: ContextEntry<Type>,
         readonly context: Type,
-        options?: SetContextOptions,
+        options?: ContextEntrySetOptions,
     ) {
         this.#snapshot = entry.snapshot();
         this.#entry = entry;

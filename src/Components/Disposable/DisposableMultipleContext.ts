@@ -24,11 +24,10 @@ class DisposableMultipleContext<
             Object.fromEntries(
                 Object.entries(argEntries).map(([key, entry]) => {
                     try {
-                        const disposable = new DisposableContext(
-                            entry,
-                            arg[key],
-                            options?.[key],
-                        );
+                        const disposable = new DisposableContext(entry, arg[key], {
+                            ...(options?.[key] ?? {}),
+                            force: false,
+                        });
 
                         this.#stack.use(disposable);
                         return [key, disposable];
