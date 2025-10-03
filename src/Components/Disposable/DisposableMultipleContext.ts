@@ -1,5 +1,5 @@
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
-import type { ArgEntries } from "~/Types/Args/ArgEntries";
+import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
@@ -18,12 +18,14 @@ class DisposableMultipleContext<
 
     constructor(
         arg: Arg,
-        argEntries: ArgEntries<Arg>,
+        entries: {
+            [Key in keyof Arg]: ContextEntry<Arg[Key]>;
+        },
         options?: SetMultipleContextOptions<Arg>,
     ) {
         this.scope = Object.freeze(
             Object.fromEntries(
-                Object.entries(argEntries).map(([key, entry]) => {
+                Object.entries(entries).map(([key, entry]) => {
                     try {
                         const disposable = new DisposableContext(entry, arg[key], {
                             ...(options?.[key] ?? {}),
