@@ -9,7 +9,7 @@ interface SafeContextOptions<Dictionary extends ContextDictionary> {
     /**
      * Hides specified keys from being shown when the instance is
      * inspected (e.g., via `console.log`). If `true`, all keys are
-     * hidden. If an array of keys, only those keys are hidden.
+     * hidden; or if an array of keys, only those keys are hidden.
      */
     hideKeys?: true | (keyof Dictionary)[];
 }

@@ -1,6 +1,8 @@
 import type { DisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 
+import type { WithContextOptions } from "./WithContextOptions";
+
 /**
  * Represents the structure of an individual disposable context within
  * a {@link DisposableMultipleContext `DisposableMultipleContext`}.
@@ -13,8 +15,9 @@ interface WithContextReturn<Type, Options> {
     context: Type;
     /**
      * Indicates if the context value was successfully changed.
-     * Returns `false` if `override: false` was used and a value
-     * already existed.
+     * Returns `false` if
+     * {@link WithContextOptions.override `override`} was used and a
+     * value already existed.
      */
     changed: WithContextChanged<Options>;
     /**
