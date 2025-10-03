@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { inspect } from "node:util";
 
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
@@ -15,6 +16,7 @@ import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
 import type { GetContextReturn } from "~/Types/Get/GetContextReturn";
 import type { GetMultipleContextOptions } from "~/Types/Get/GetMultipleContextOptions";
 import type { GetMultipleContextReturn } from "~/Types/Get/GetMultipleContextReturn";
+import type { SafeContextOptions } from "~/Types/SafeContextOptions";
 import type { SetContextOptions } from "~/Types/Set/SetContextOptions";
 import type { SetContextReturn } from "~/Types/Set/SetContextReturn";
 import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
@@ -22,10 +24,20 @@ import type { SetMultipleContextReturn } from "~/Types/Set/SetMultipleContextRet
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 
+const INSPECT = inspect.custom;
+
 class SafeContext<Dictionary extends ContextDictionary> {
     readonly #globalRegistry: ContextRegistry<Dictionary> = new ContextRegistry();
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
         new AsyncLocalStorage();
+
+    readonly #hideKeys: boolean | (keyof Dictionary)[] = false;
+
+    constructor(options?: SafeContextOptions<Dictionary>) {
+        if (options?.hideKeys) {
+            this.#hideKeys = options.hideKeys;
+        }
+    }
 
     #getRegistry(): ContextRegistry<Dictionary> {
         return this.#asyncLocalStorage.getStore() ?? this.#globalRegistry;
@@ -181,6 +193,18 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 return callback();
             },
         );
+    }
+
+    [INSPECT](): string {
+        const currentKeys = this.#getRegistry().getCurrentKeys();
+
+        const hideKeys = this.#hideKeys;
+        const keysToHide =
+            hideKeys && !Array.isArray(hideKeys) ? currentKeys : new Set(hideKeys || []);
+
+        const keys = [...currentKeys].filter((key) => !keysToHide.has(key)) as string[];
+
+        return `SafeContext { ${keys.length ? keys.map((key) => `'${key}'`).join(", ") : "..."} }`;
     }
 }
 
