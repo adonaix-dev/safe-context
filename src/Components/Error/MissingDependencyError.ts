@@ -24,14 +24,9 @@ function getGlobalThis(): typeof globalThis | undefined {
 class MissingDependencyError extends SafeContextError {
     override name = "MissingDependencyError";
 
-    static #findDependency(
-        dependency: string,
-        target: typeof globalThis,
-    ): ReferenceError | null {
-        const dependencyParts = dependency.split(".");
-
-        for (const part of dependencyParts) {
-            target = (target as any)[part];
+    static #findDependency(dependency: string, target: any): ReferenceError | null {
+        for (const part of dependency.split(".")) {
+            target = target[part];
 
             if (typeof target === "undefined") {
                 return new ReferenceError(
@@ -48,7 +43,7 @@ class MissingDependencyError extends SafeContextError {
 
         if (!globalThis) {
             throw new ReferenceError(
-                `could not resolve the global scope object in the current environment.`,
+                `could not resolve the global scope object in the current environment`,
             );
         }
 

@@ -23,12 +23,12 @@ import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 
 class SafeContext<Dictionary extends ContextDictionary> {
-    readonly #registry: ContextRegistry<Dictionary> = new ContextRegistry();
+    readonly #globalRegistry: ContextRegistry<Dictionary> = new ContextRegistry();
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
         new AsyncLocalStorage();
 
     #getRegistry(): ContextRegistry<Dictionary> {
-        return this.#asyncLocalStorage.getStore() ?? this.#registry;
+        return this.#asyncLocalStorage.getStore() ?? this.#globalRegistry;
     }
 
     #get(key: string, options?: GetContextOptions<any>): GetContextReturn<any, any> {
@@ -169,7 +169,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         options: ConcurrentlySafeOptions<Dictionary> = {},
     ): T {
         return this.#asyncLocalStorage.run(
-            new ContextRegistry(this.#getRegistry(), this.#registry),
+            new ContextRegistry(this.#getRegistry(), this.#globalRegistry),
             () => {
                 const registry = this.#getRegistry();
                 const { contexts } = options;

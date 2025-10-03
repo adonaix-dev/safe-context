@@ -36,9 +36,7 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         return entry;
     }
 
-    getLocalEntry<Key extends keyof Dictionary>(
-        key: Key,
-    ): ContextEntry<Dictionary[Key]> {
+    getLocalEntry<Key extends keyof Dictionary>(key: Key): ContextEntry<Dictionary[Key]> {
         if (this.registryMap.has(key)) {
             return this.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
         }
