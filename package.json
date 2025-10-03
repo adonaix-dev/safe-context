@@ -1,14 +1,46 @@
 {
     "name": "safe-context",
+    "version": "0.1.0",
     "type": "module",
     "description": "Tame race conditions in Node.js! A zero-dependency, type-safe context manager for concurrent and synchronous state management.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/adonaix-dev/safe-context.git"
+    },
     "author": "Arthur Adonai <>",
+    "license": "MIT",
     "packageManager": "bun@1.2.22",
     "engines": {
         "node": "^20.0.0"
     },
     "main": "./dist/main.js",
     "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "keywords": [
+        "async",
+        "async_hooks",
+        "async-local-storage",
+        "asynchronous",
+        "bun",
+        "concurrency",
+        "context",
+        "context-manager",
+        "dependency-injection",
+        "di",
+        "disposable",
+        "node",
+        "race-condition",
+        "resource-management",
+        "safe-context",
+        "scope",
+        "shared-state",
+        "state-management",
+        "thread-safe",
+        "type-safe",
+        "typescript"
+    ],
     "scripts": {
         "build": "rollup -c"
     },
