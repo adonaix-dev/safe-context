@@ -8,9 +8,6 @@ import type { SetContextOptions } from "./SetContextOptions";
  * @template Arg A subset of the main context dictionary.
  */
 type SetMultipleContextOptions<Arg extends ContextDictionary> = {
-    /**
-     * Individual options for each key being set.
-     */
     [Key in keyof Arg]?: SetContextOptions;
 };
 

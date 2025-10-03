@@ -8,9 +8,6 @@ import type { GetContextOptions } from "./GetContextOptions";
  * @template PartialContext A subset of the main context dictionary.
  */
 type GetMultipleContextOptions<PartialContext extends ContextDictionary> = {
-    /**
-     * Individual options for each key being retrieved.
-     */
     [Key in keyof PartialContext]?: GetContextOptions<PartialContext[Key]>;
 };
 
