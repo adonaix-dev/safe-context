@@ -1,6 +1,7 @@
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
 import type { ArgEntries } from "~/Types/Args/ArgEntries";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
+import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 import type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextScope";
@@ -10,7 +11,7 @@ import { DisposableContext } from "./DisposableContext";
 class DisposableMultipleContext<
     Arg extends ContextDictionary,
     Options extends WithMultipleContextOptions<Arg>,
-> implements Disposable
+> implements IDisposableMultipleContext<Arg, Options>
 {
     readonly #stack = new DisposableStack();
     readonly scope: WithMultipleContextScope<Arg, Options>;

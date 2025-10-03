@@ -1,13 +1,12 @@
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextEntrySetOptions } from "~/Registry/Entry/Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "~/Registry/Entry/Types/ContextEntrySnapshot";
-import type { SetContextOptions } from "~/Types/Set/SetContextOptions";
+import type { DisposableContext as IDisposableContext } from "~/Types/Disposable/DisposableContext";
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
-import type { WithContextReturn } from "~/Types/With/WithContextReturn";
 
 class DisposableContext<Type, Options extends WithContextOptions>
-    implements Disposable, WithContextReturn<Type, Options>
+    implements IDisposableContext<Type, Options>
 {
     readonly #snapshot?: ContextEntrySnapshot<Type>;
     readonly #entry: ContextEntry<Type>;

@@ -14,8 +14,8 @@ export type { WithContextOptions } from "~/Types/With/WithContextOptions";
 export type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 export type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextScope";
 
-export type { DisposableContext } from "~/Disposable/DisposableContext";
-export type { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
+export type { DisposableContext } from "~/Types/Disposable/DisposableContext";
+export type { DisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 
 export { MissingDependencyError } from "~/Error/MissingDependencyError";
 export { SafeContextError } from "~/Error/SafeContextError";

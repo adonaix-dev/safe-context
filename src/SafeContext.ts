@@ -24,7 +24,7 @@ import type { SetMultipleContextReturn } from "~/Types/Set/SetMultipleContextRet
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 
-const INSPECT = inspect.custom;
+const INSPECT: typeof inspect.custom = inspect.custom;
 
 class SafeContext<Dictionary extends ContextDictionary> {
     readonly #globalRegistry: ContextRegistry<Dictionary> = new ContextRegistry();
