@@ -21,6 +21,9 @@ function getGlobalThis(): typeof globalThis | undefined {
     } catch {}
 }
 
+/**
+ * Error thrown when a required runtime feature is not available.
+ */
 class MissingDependencyError extends SafeContextError {
     override name = "MissingDependencyError";
 
@@ -38,6 +41,17 @@ class MissingDependencyError extends SafeContextError {
         return null;
     }
 
+    /**
+     * Asserts that the required runtime dependencies are available in
+     * the global scope.
+     *
+     * @param dependencies A list of global dependencies to check
+     *   (e.g., `"Symbol.dispose"`, `"DisposableStack"`).
+     * @throws {MissingDependencyError} If any of the specified
+     *   dependencies cannot be found.
+     * @throws {ReferenceError} If the global scope object cannot be
+     *   resolved.
+     */
     static assert(...dependencies: string[]): void {
         const globalThis = getGlobalThis();
 

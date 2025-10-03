@@ -12,6 +12,8 @@ import type { GetArgs } from "~/Types/Args/GetArgs";
 import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ConcurrentlySafeOptions } from "~/Types/ConcurrentlySafeOptions";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
+import type { DisposableContext as IDisposableContext } from "~/Types/Disposable/DisposableContext";
+import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
 import type { GetContextReturn } from "~/Types/Get/GetContextReturn";
 import type { GetMultipleContextOptions } from "~/Types/Get/GetMultipleContextOptions";
@@ -26,6 +28,14 @@ import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContex
 
 const INSPECT: typeof inspect.custom = inspect.custom;
 
+/**
+ * A concurrency-safe context manager powered by
+ * {@link AsyncLocalStorage `AsyncLocalStorage`}. It allows setting and
+ * getting values that can be global or scoped to a specific
+ * asynchronous execution path.
+ *
+ * @template Dictionary A type describing the shape of the context.
+ */
 class SafeContext<Dictionary extends ContextDictionary> {
     readonly #globalRegistry: ContextRegistry<Dictionary> = new ContextRegistry();
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
@@ -33,6 +43,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     readonly #hideKeys: boolean | (keyof Dictionary)[] = false;
 
+    /**
+     * @param options Configuration for the new instance.
+     */
     constructor(options?: SafeContextOptions<Dictionary>) {
         if (options?.hideKeys) {
             this.#hideKeys = options.hideKeys;
@@ -61,10 +74,30 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
     }
 
+    /**
+     * Retrieves a single context value by its key.
+     *
+     * @param key The key of the context to retrieve.
+     * @param options Options for the retrieval operation.
+     *
+     * @returns The context value, or `undefined` if it's not set and
+     *   no {@link GetContextOptions.supply `supply()`} function is
+     *   provided.
+     */
     get<Key extends keyof Dictionary, Options extends GetContextOptions<Dictionary[Key]>>(
         key: Key,
         options?: Options,
     ): GetContextReturn<Dictionary[Key], Options>;
+
+    /**
+     * Retrieves multiple context values.
+     *
+     * @param keys An array of keys to retrieve.
+     * @param options Options for the retrieval operation, applicable
+     *   to each key.
+     *
+     * @returns An object containing the retrieved key-value pairs.
+     */
     get<
         Key extends keyof Dictionary,
         Options extends GetMultipleContextOptions<Pick<Dictionary, Key>>,
@@ -72,6 +105,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         keys: Key[],
         options?: Options,
     ): GetMultipleContextReturn<Pick<Dictionary, Key>, Options>;
+
     get(...args: GetArgs): any {
         return isGetContextArgs(args) ? this.#get(...args) : this.#getMultiple(...args);
     }
@@ -115,15 +149,41 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
     }
 
+    /**
+     * Sets a single context value.
+     *
+     * @param key The key of the context to set.
+     * @param context The value to set.
+     * @param options Options for the set operation.
+     *
+     * @returns `true` if the context was successfully set, or `false`
+     *   otherwise.
+     * @throws {FinalOverrideError} If attempting to override a
+     *   context marked as {@link SetContextOptions.final `final`}.
+     */
     set<Key extends keyof Dictionary, Options extends SetContextOptions>(
         key: Key,
         context: Dictionary[Key],
         options?: Options,
     ): SetContextReturn<Options>;
+
+    /**
+     * Sets multiple context values at once.
+     *
+     * @param arg An object of key-value pairs to set.
+     * @param options Options for the set operation, applicable to
+     *   each key.
+     *
+     * @returns An object containing the result of each individual set
+     *   operation.
+     * @throws {FinalOverrideError} If attempting to override a
+     *   context marked as {@link SetContextOptions.final `final`}.
+     */
     set<Arg extends Partial<Dictionary>, Options extends SetMultipleContextOptions<Arg>>(
         arg: Arg,
         options?: Options,
     ): SetMultipleContextReturn<Arg, Options>;
+
     set(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#set(...args) : this.#setMultiple(...args);
     }
@@ -163,19 +223,69 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
     }
 
+    /**
+     * Temporarily sets a context value within a scope. Designed for
+     * use with the `using` statement. The original value is restored
+     * automatically when the scope is exited.
+     *
+     * @param key The key of the context to set.
+     * @param context The temporary value.
+     * @param options Options for the set operation.
+     *
+     * @returns A {@link IDisposableContext `DisposableContext`} object
+     *   to be used in a `using` statement.
+     * @throws {FinalOverrideError} If attempting to override a
+     *   context marked as {@link SetContextOptions.final `final`}.
+     * @throws {MissingDependencyError} If the `Symbol.dispose`
+     *   feature is not available in the JavaScript runtime.
+     */
     with<Key extends keyof Dictionary, Options extends WithContextOptions>(
         key: Key,
         context: Dictionary[Key],
         options?: Options,
-    ): DisposableContext<Dictionary[Key], Options>;
+    ): IDisposableContext<Dictionary[Key], Options>;
+
+    /**
+     * Temporarily sets multiple context values within a scope.
+     * Designed for use with the `using` statement.
+     *
+     * @param arg An object of key-value pairs to set.
+     * @param options Options for the set operation, applicable to
+     *   each key.
+     *
+     * @returns A
+     *   {@link IDisposableMultipleContext `DisposableMultipleContext`}
+     *   object to be used in a `using` statement.
+     * @throws {FinalOverrideError} If attempting to override any
+     *   context marked as {@link SetContextOptions.final `final`}.
+     * @throws {MissingDependencyError} If `Symbol.dispose` or
+     *   `DisposableStack` are not available in the JavaScript
+     *   runtime.
+     */
     with<
         Arg extends Partial<Dictionary>,
         Options extends WithMultipleContextOptions<Arg>,
-    >(arg: Arg, options?: Options): DisposableMultipleContext<Arg, Options>;
+    >(arg: Arg, options?: Options): IDisposableMultipleContext<Arg, Options>;
+
     with(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
     }
 
+    /**
+     * Executes a callback within a new, isolated asynchronous scope.
+     * It guarantees that context changes made inside the callback
+     * (e.g., using {@link with `with()`} or {@link set `set()`} with
+     * the {@link SetContextOptions.local `local`} option) do not
+     * affect the parent scope or any other concurrently running
+     * operations.
+     *
+     * @param callback The function to execute within the isolated
+     *   scope.
+     * @param options Options to control how the new scope inherits
+     *   contexts from its parent.
+     *
+     * @returns The value returned by the callback function.
+     */
     concurrentlySafe<T>(
         callback: () => T,
         options: ConcurrentlySafeOptions<Dictionary> = {},
@@ -195,6 +305,11 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
     }
 
+    /**
+     * Custom inspection method for Node.js's `util.inspect`.
+     *
+     * @internal
+     */
     [INSPECT](): string {
         const currentKeys = this.#getRegistry().getCurrentKeys();
 

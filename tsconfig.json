@@ -2,12 +2,20 @@
     "extends": "adonaix-lib/tsconfig.json",
     "compilerOptions": {
         "lib": [
-            "es2023"
+            "es2023",
+            "esnext.disposable"
         ],
         "target": "es2023",
         "paths": {
             "~/*": [
-                "./src/Components/*"
+                "./src/Components/*",
+                "./src/Polyfill/*"
+            ],
+            "pkg/*": [
+                "./*"
+            ],
+            "it": [
+                "./src/SafeContext"
             ]
         }
     },
