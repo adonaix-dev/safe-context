@@ -56,9 +56,7 @@ export function uncomment(): Plugin {
             });
 
             const sourceMap = new SourceMapGenerator({ file: fileName });
-            const code = generate(ast, {
-                sourceMap,
-            });
+            const code = generate(ast, { sourceMap });
 
             return {
                 code,
