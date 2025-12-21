@@ -3,6 +3,7 @@ import { inspect } from "node:util";
 
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
+import { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
 import { isGetContextArgs } from "~/Util/IsGetContextArgs";
@@ -11,6 +12,7 @@ import type { GetArgs } from "~/Types/Args/GetArgs";
 import type { SetArgs } from "~/Types/Args/SetArgs";
 import type { ConcurrentlySafeOptions } from "~/Types/ConcurrentlySafeOptions";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
+import type { ContextSnapshot } from "~/Types/ContextSnapshot";
 import type { DisposableContext as IDisposableContext } from "~/Types/Disposable/DisposableContext";
 import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
@@ -53,6 +55,16 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     #getRegistry(): ContextRegistry<Dictionary> {
         return this.#asyncLocalStorage.getStore() ?? this.#globalRegistry;
+    }
+
+    /**
+     * Checks if a context value is currently set without retrieving
+     * it.
+     *
+     * @param key The key to check.
+     */
+    has(key: keyof Dictionary): boolean {
+        return this.#getRegistry().has(key);
     }
 
     #get(key: string, options?: GetContextOptions<any>): GetContextReturn<any, any> {
@@ -107,6 +119,25 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     get(...args: GetArgs): any {
         return isGetContextArgs(args) ? this.#get(...args) : this.#getMultiple(...args);
+    }
+
+    /**
+     * Retrieves a context value, throwing an error if it is not set.
+     *
+     * @param key The key of the context to retrieve.
+     * @param message A custom error message to be thrown if the
+     *   context is not found. If not provided, a default message
+     *   including the context key will be used.
+     *
+     * @returns The context value.
+     * @throws {ContextNotFoundError} If the context is not found.
+     */
+    require<Key extends keyof Dictionary>(key: Key, message?: string): Dictionary[Key] {
+        if (!this.has(key)) {
+            throw new ContextNotFoundError(key as string, message);
+        }
+
+        return this.get(key)!;
     }
 
     #set(key: string, context: any, options?: SetContextOptions): boolean {
@@ -248,6 +279,32 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     with(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
+    }
+
+    /**
+     * Creates a plain object containing a snapshot of all currently
+     * set contexts. Keys marked as hidden in the constructor will be
+     * excluded.
+     *
+     * @returns A partial dictionary with the current values.
+     */
+    snapshot(): ContextSnapshot<Dictionary> {
+        const registry = this.#getRegistry();
+        const currentKeys = registry.getCurrentKeys();
+        const hideKeys = this.#hideKeys;
+
+        if (hideKeys === true) {
+            return {};
+        }
+
+        const keysToHide =
+            hideKeys && !Array.isArray(hideKeys) ? currentKeys : new Set(hideKeys || []);
+
+        return Object.fromEntries(
+            [...currentKeys]
+                .filter((key) => !keysToHide.has(key))
+                .map((key) => [key, registry.getAsGlobalAsPossibleEntry(key).get()]),
+        ) as any;
     }
 
     /**

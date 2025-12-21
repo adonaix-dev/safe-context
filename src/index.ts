@@ -17,6 +17,9 @@ export type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextS
 export type { DisposableContext } from "~/Types/Disposable/DisposableContext";
 export type { DisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
 
+export type { ContextSnapshot } from "~/Types/ContextSnapshot";
+
+export { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 export { MissingDependencyError } from "~/Error/MissingDependencyError";
 export { SafeContextError } from "~/Error/SafeContextError";
 export { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";

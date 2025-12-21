@@ -53,6 +53,10 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         this.parent?.getCurrentKeys()?.forEach((key) => keys.add(key));
         return keys;
     }
+
+    has(key: keyof Dictionary): boolean {
+        return this.registryMap.has(key) || (this.parent?.has(key) ?? false);
+    }
 }
 
 export { ContextRegistry };
