@@ -69,7 +69,8 @@ export function uncomment(): Plugin {
 export default [
     getOptions("./src/index.ts", "d.ts", {
         output: {
-            banner: 'import { AsyncLocalStorage } from "node:async_hooks";',
+            banner: 'import { AsyncLocalStorage } from "node:async_hooks";\
+            import type { ArgumentsError, OverloadsError } from "zod-guardians";',
         },
         plugins: [
             dts({

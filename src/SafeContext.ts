@@ -3,7 +3,7 @@ import { inspect } from "node:util";
 
 import z from "zod";
 import { ZodFunction, ZodOverloadedFunction } from "zod-guardians";
-import type { ArgumentsError } from "zod-guardians";
+import type { ArgumentsError, OverloadsError } from "zod-guardians";
 
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
@@ -217,8 +217,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @returns The context value, or `undefined` if it's not set and
      *   no {@link GetContextOptions.supply `supply()`} function is
      *   provided.
-     * @throws {ArgumentsError} If {@link key `key`} is not a string or
-     *   if {@link options `options`} properties types are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     get<Key extends keyof Dictionary, Options extends GetContextOptions<Dictionary[Key]>>(
         key: Key,
@@ -233,9 +233,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   to each key.
      *
      * @returns An object containing the retrieved key-value pairs.
-     * @throws {ArgumentsError} If {@link keys `keys`} is not an array
-     *   of strings or if {@link options `options`} properties types
-     *   are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     get<
         Key extends keyof Dictionary,
@@ -277,8 +276,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   otherwise.
      * @throws {FinalOverrideError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
-     * @throws {ArgumentsError} If {@link key `key`} is not a string or
-     *   if {@link options `options`} properties types are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     set<Key extends keyof Dictionary, Options extends SetContextOptions>(
         key: Key,
@@ -297,9 +296,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   operation.
      * @throws {FinalOverrideError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
-     * @throws {ArgumentsError} If {@link contexts `contexts`} is not a
-     *   string record of contexts or if {@link options `options`}
-     *   properties types are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     set<
         Ctxs extends Partial<Dictionary>,
@@ -326,8 +324,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @throws {MissingDependencyError} If the
      *   {@link Symbol.dispose `Symbol.dispose`} feature is not
      *   available in the JavaScript runtime.
-     * @throws {ArgumentsError} If {@link key `key`} is not a string or
-     *   if {@link options `options`} properties types are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     with<Key extends keyof Dictionary, Options extends WithContextOptions>(
         key: Key,
@@ -352,9 +350,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   {@link Symbol.dispose `Symbol.dispose`} or the
      *   {@link DisposableStack `DisposableStack`} features are not
      *   available in the JavaScript runtime.
-     * @throws {ArgumentsError} If {@link contexts `contexts`} is not a
-     *   string record of contexts or if {@link options `options`}
-     *   properties types are incorrect.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
      */
     with<
         Ctxs extends Partial<Dictionary>,
