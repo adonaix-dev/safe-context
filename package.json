@@ -1,6 +1,6 @@
 {
     "name": "safe-context",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "type": "module",
     "description": "Tame race conditions in Node.js! A zero-dependency, type-safe context manager for concurrent and synchronous state management.",
     "repository": {
