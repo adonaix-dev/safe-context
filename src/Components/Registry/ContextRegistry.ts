@@ -57,6 +57,14 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
     has(key: keyof Dictionary): boolean {
         return this.registryMap.has(key) || (this.parent?.has(key) ?? false);
     }
+
+    clear(): void {
+        this.registryMap.forEach((entry, key) => {
+            if (!entry.isFinal()) {
+                this.registryMap.delete(key);
+            }
+        });
+    }
 }
 
 export { ContextRegistry };

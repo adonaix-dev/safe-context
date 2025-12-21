@@ -10,6 +10,10 @@ class ContextEntry<Type> {
     private context?: Type;
     private final: boolean = false;
 
+    isFinal(): boolean {
+        return this.final;
+    }
+
     get(options: GetContextOptions<Type> = {}): Type | undefined {
         if (
             this.state === ContextEntryState.Unset &&

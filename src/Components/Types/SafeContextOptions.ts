@@ -8,8 +8,9 @@ import type { ContextDictionary } from "./ContextDictionary";
 interface SafeContextOptions<Dictionary extends ContextDictionary> {
     /**
      * Hides specified keys from being shown when the instance is
-     * inspected (e.g., via `console.log`). If `true`, all keys are
-     * hidden; or if an array of keys, only those keys are hidden.
+     * inspected (e.g., via `console.log`) or captured in the
+     * snapshot. If `true`, all keys are hidden; or if an array of
+     * keys, only those keys are hidden.
      */
     hideKeys?: true | (keyof Dictionary)[];
 }

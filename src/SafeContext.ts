@@ -417,6 +417,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     /**
+     * Clears all non-final entries from the current context registry.
+     */
+    clear(): void {
+        this.#getRegistry().clear();
+    }
+
+    /**
      * Custom inspection method for Node.js's `util.inspect`.
      *
      * @internal
