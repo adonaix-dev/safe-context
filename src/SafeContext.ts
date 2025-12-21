@@ -3,7 +3,6 @@ import { inspect } from "node:util";
 
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
-import { MissingDependencyError } from "~/Error/MissingDependencyError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
 import { isGetContextArgs } from "~/Util/IsGetContextArgs";
@@ -124,13 +123,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     #setMultiple(
-        arg: ContextDictionary,
+        contexts: ContextDictionary,
         options?: SetMultipleContextOptions<any>,
     ): SetMultipleContextReturn<any, any> {
         const registry = this.#getRegistry();
 
         return Object.fromEntries(
-            Object.entries(arg).map(([key, context]) => {
+            Object.entries(contexts).map(([key, context]) => {
                 const entry = options?.[key]?.local
                     ? registry.getLocalEntry(key)
                     : registry.getAsGlobalAsPossibleEntry(key);
@@ -170,7 +169,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     /**
      * Sets multiple context values at once.
      *
-     * @param arg An object of key-value pairs to set.
+     * @param contexts An object of key-value pairs to set.
      * @param options Options for the set operation, applicable to
      *   each key.
      *
@@ -179,10 +178,10 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @throws {FinalOverrideError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
      */
-    set<Arg extends Partial<Dictionary>, Options extends SetMultipleContextOptions<Arg>>(
-        arg: Arg,
-        options?: Options,
-    ): SetMultipleContextReturn<Arg, Options>;
+    set<
+        Ctxs extends Partial<Dictionary>,
+        Options extends SetMultipleContextOptions<Ctxs>,
+    >(contexts: Ctxs, options?: Options): SetMultipleContextReturn<Ctxs, Options>;
 
     set(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#set(...args) : this.#setMultiple(...args);
@@ -193,34 +192,14 @@ class SafeContext<Dictionary extends ContextDictionary> {
         context: any,
         options?: SetContextOptions,
     ): DisposableContext<any, any> {
-        MissingDependencyError.assert("Symbol.dispose");
-
-        try {
-            return new DisposableContext(
-                this.#getRegistry().getLocalEntry(key),
-                context,
-                { ...(options ?? {}), force: false },
-            );
-        } catch (error: unknown) {
-            throw error instanceof FinalOverrideError ? error.withKey(key) : error;
-        }
+        return DisposableContext.create(key, context, this.#getRegistry(), options);
     }
 
     #withMultiple(
-        arg: ContextDictionary,
+        contexts: ContextDictionary,
         options?: SetMultipleContextOptions<any>,
     ): DisposableMultipleContext<any, any> {
-        MissingDependencyError.assert("Symbol.dispose", "DisposableStack");
-
-        const registry = this.#getRegistry();
-
-        return new DisposableMultipleContext(
-            arg,
-            Object.fromEntries(
-                Object.keys(arg).map((key) => [key, registry.getLocalEntry(key)]),
-            ),
-            options,
-        );
+        return DisposableMultipleContext.create(contexts, this.#getRegistry(), options);
     }
 
     /**
@@ -249,7 +228,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * Temporarily sets multiple context values within a scope.
      * Designed for use with the `using` statement.
      *
-     * @param arg An object of key-value pairs to set.
+     * @param contexts An object of key-value pairs to set.
      * @param options Options for the set operation, applicable to
      *   each key.
      *
@@ -263,9 +242,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   runtime.
      */
     with<
-        Arg extends Partial<Dictionary>,
-        Options extends WithMultipleContextOptions<Arg>,
-    >(arg: Arg, options?: Options): IDisposableMultipleContext<Arg, Options>;
+        Ctxs extends Partial<Dictionary>,
+        Options extends WithMultipleContextOptions<Ctxs>,
+    >(contexts: Ctxs, options?: Options): IDisposableMultipleContext<Ctxs, Options>;
 
     with(...args: SetArgs): any {
         return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);

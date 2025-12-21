@@ -3,22 +3,11 @@ import { SafeContextError } from "./SafeContextError";
 declare var self: typeof globalThis;
 declare var window: typeof globalThis;
 
-function getGlobalThis(): typeof globalThis | undefined {
-    try {
-        return globalThis;
-    } catch {}
-
-    try {
-        return self;
-    } catch {}
-
-    try {
-        return window;
-    } catch {}
-
-    try {
-        return global;
-    } catch {}
+function getGlobal(): typeof globalThis | undefined {
+    if (typeof globalThis !== "undefined") return globalThis;
+    if (typeof self !== "undefined") return self;
+    if (typeof window !== "undefined") return window;
+    if (typeof global !== "undefined") return global;
 }
 
 /**
@@ -53,7 +42,7 @@ class MissingDependencyError extends SafeContextError {
      *   resolved.
      */
     static assert(...dependencies: string[]): void {
-        const globalThis = getGlobalThis();
+        const globalThis = getGlobal();
 
         if (!globalThis) {
             throw new ReferenceError(

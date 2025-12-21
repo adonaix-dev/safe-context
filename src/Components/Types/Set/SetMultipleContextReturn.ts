@@ -8,14 +8,14 @@ import type { SetMultipleContextOptions } from "./SetMultipleContextOptions";
  * where keys are the context keys and values are the results of their
  * respective set operations.
  *
- * @template Arg A subset of the main context dictionary.
+ * @template Ctxs A subset of the main context dictionary.
  * @template Options The set options provided.
  */
 type SetMultipleContextReturn<
-    Arg extends ContextDictionary,
-    Options extends SetMultipleContextOptions<Arg>,
+    Ctxs extends ContextDictionary,
+    Options extends SetMultipleContextOptions<Ctxs>,
 > = {
-    [Key in keyof Arg]: SetContextReturn<Options[Key]>;
+    [Key in keyof Ctxs]: SetContextReturn<Options[Key]>;
 };
 
 export type { SetMultipleContextReturn };

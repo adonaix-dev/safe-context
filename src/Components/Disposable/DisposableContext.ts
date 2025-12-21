@@ -1,3 +1,8 @@
+import type { key } from "@adonaix/types";
+
+import { MissingDependencyError } from "~/Error/MissingDependencyError";
+import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
+import type { ContextRegistry } from "~/Registry/ContextRegistry";
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextEntrySetOptions } from "~/Registry/Entry/Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "~/Registry/Entry/Types/ContextEntrySnapshot";
@@ -5,9 +10,10 @@ import type { DisposableContext as IDisposableContext } from "~/Types/Disposable
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 
-class DisposableContext<Type, Options extends WithContextOptions>
-    implements IDisposableContext<Type, Options>
-{
+class DisposableContext<
+    Type,
+    Options extends WithContextOptions,
+> implements IDisposableContext<Type, Options> {
     readonly #snapshot?: ContextEntrySnapshot<Type>;
     readonly #entry: ContextEntry<Type>;
     readonly #changed: boolean;
@@ -28,6 +34,31 @@ class DisposableContext<Type, Options extends WithContextOptions>
         this.#snapshot = entry.snapshot();
         this.#entry = entry;
         this.#changed = entry.set(context, options);
+    }
+
+    static create<Type, Options extends WithContextOptions>(
+        key: key,
+        context: Type,
+        registry: ContextRegistry<any>,
+        options?: Options,
+    ): DisposableContext<Type, Options> {
+        MissingDependencyError.assert("Symbol.dispose");
+
+        const entry =
+            (options?.local ?? true)
+                ? registry.getLocalEntry(key)
+                : registry.getAsGlobalAsPossibleEntry(key);
+
+        try {
+            return new DisposableContext(entry, context, {
+                ...(options ?? {}),
+                force: false,
+            });
+        } catch (error: unknown) {
+            throw error instanceof FinalOverrideError
+                ? error.withKey(key as string)
+                : error;
+        }
     }
 
     [Symbol.dispose](): void {

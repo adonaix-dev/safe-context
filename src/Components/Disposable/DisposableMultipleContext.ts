@@ -1,8 +1,10 @@
+import type { Mutable } from "@adonaix/types";
+
+import { MissingDependencyError } from "~/Error/MissingDependencyError";
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
-import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
+import type { ContextRegistry } from "~/Registry/ContextRegistry";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
-import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 import type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextScope";
 
@@ -11,39 +13,55 @@ import { DisposableContext } from "./DisposableContext";
 class DisposableMultipleContext<
     Arg extends ContextDictionary,
     Options extends WithMultipleContextOptions<Arg>,
-> implements IDisposableMultipleContext<Arg, Options>
-{
+> implements IDisposableMultipleContext<Arg, Options> {
     readonly #stack = new DisposableStack();
-    readonly scope: WithMultipleContextScope<Arg, Options>;
 
-    constructor(
-        arg: Arg,
-        entries: {
-            [Key in keyof Arg]: ContextEntry<Arg[Key]>;
-        },
-        options?: SetMultipleContextOptions<Arg>,
+    private constructor(
+        stack: DisposableStack,
+        readonly scope: WithMultipleContextScope<Arg, Options>,
     ) {
-        this.scope = Object.freeze(
-            Object.fromEntries(
-                Object.entries(entries).map(([key, entry]) => {
-                    try {
-                        const disposable = new DisposableContext(entry, arg[key], {
-                            ...(options?.[key] ?? {}),
-                            force: false,
-                        });
+        this.#stack = stack;
+    }
 
-                        this.#stack.use(disposable);
-                        return [key, disposable];
-                    } catch (error: unknown) {
-                        this.#stack.dispose();
+    static create<
+        Ctxs extends ContextDictionary,
+        Options extends WithMultipleContextOptions<Ctxs>,
+    >(
+        contexts: Ctxs,
+        registry: ContextRegistry<any>,
+        options?: Options,
+    ): DisposableMultipleContext<Ctxs, Options> {
+        MissingDependencyError.assert("Symbol.dispose", "DisposableStack");
 
-                        throw error instanceof FinalOverrideError
-                            ? error.withKey(key)
-                            : error;
-                    }
-                }),
-            ),
-        ) as any;
+        const scope: Mutable<WithMultipleContextScope<Ctxs, Options>> = {} as any;
+        const stack = new DisposableStack();
+
+        Object.entries(contexts).forEach(
+            ([key, context]: [keyof Ctxs, Ctxs[keyof Ctxs]]) => {
+                const entry =
+                    (options?.[key]?.local ?? true)
+                        ? registry.getLocalEntry(key)
+                        : registry.getAsGlobalAsPossibleEntry(key);
+
+                try {
+                    const disposable = new DisposableContext(entry, context, {
+                        ...(options?.[key] ?? {}),
+                        force: false,
+                    });
+
+                    stack.use(disposable);
+                    scope[key] = disposable;
+                } catch (error: unknown) {
+                    stack.dispose();
+
+                    throw error instanceof FinalOverrideError
+                        ? error.withKey(key as string)
+                        : error;
+                }
+            },
+        );
+
+        return new DisposableMultipleContext(stack, Object.freeze(scope));
     }
 
     [Symbol.dispose](): void {

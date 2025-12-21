@@ -13,10 +13,10 @@ import type { WithMultipleContextOptions } from "./WithMultipleContextOptions";
  * {@link WithContextReturn `WithContextReturn`} objects.
  */
 type WithMultipleContextScope<
-    Arg extends ContextDictionary,
-    Options extends WithMultipleContextOptions<Arg>,
+    Ctxs extends ContextDictionary,
+    Options extends WithMultipleContextOptions<Ctxs>,
 > = {
-    readonly [Key in keyof Arg]: WithContextReturn<Arg[Key], Options[Key]>;
+    readonly [Key in keyof Ctxs]: WithContextReturn<Ctxs[Key], Options[Key]>;
 };
 
 export type { WithMultipleContextScope };

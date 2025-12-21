@@ -1,15 +1,17 @@
 import type { SafeContext } from "it";
 
 import type { ContextDictionary } from "~/Types/ContextDictionary";
-import type { SetMultipleContextOptions } from "~/Types/Set/SetMultipleContextOptions";
+
+import type { WithContextOptions } from "./WithContextOptions";
 
 /**
  * Options for setting multiple temporary contexts using
  * {@link SafeContext.with `with()`}.
  *
- * @see {@link SetMultipleContextOptions `SetMultipleContextOptions`}
+ * @template Ctxs A subset of the main context dictionary.
  */
-type WithMultipleContextOptions<Arg extends ContextDictionary> =
-    SetMultipleContextOptions<Arg>;
+type WithMultipleContextOptions<Ctxs extends ContextDictionary> = {
+    [Key in keyof Ctxs]?: WithContextOptions;
+};
 
 export type { WithMultipleContextOptions };
