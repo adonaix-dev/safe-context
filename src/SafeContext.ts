@@ -1,15 +1,23 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { inspect } from "node:util";
 
+import z from "zod";
+import { ZodFunction, ZodOverloadedFunction } from "zod-guardians";
+
 import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
 import { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
 import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
-import { isGetContextArgs } from "~/Util/IsGetContextArgs";
-import { isSetContextArgs } from "~/Util/IsSetContextArgs";
-import type { GetArgs } from "~/Types/Args/GetArgs";
-import type { SetArgs } from "~/Types/Args/SetArgs";
+import { ContextsSchema } from "~/Schema/Contexts";
+import { KeySchema } from "~/Schema/Key";
+import { ConcurrentlySafeOptionsSchema } from "~/Schema/Options/ConcurrentlySafeOptions";
+import { GetContextOptionsSchema } from "~/Schema/Options/GetContextOptions";
+import { GetMultipleContextOptionsSchema } from "~/Schema/Options/GetMultipleContextOptions";
+import { SetContextOptionsSchema } from "~/Schema/Options/SetContextOptions";
+import { SetMultipleContextOptionsSchema } from "~/Schema/Options/SetMultipleContextOptions";
+import { WithContextOptionsSchema } from "~/Schema/Options/WithContextOptions";
+import { WithMultipleContextOptionsSchema } from "~/Schema/Options/WithMultipleContextOptions";
 import type { ConcurrentlySafeOptions } from "~/Types/ConcurrentlySafeOptions";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { ContextSnapshot } from "~/Types/ContextSnapshot";
@@ -57,6 +65,137 @@ class SafeContext<Dictionary extends ContextDictionary> {
         return this.#asyncLocalStorage.getStore() ?? this.#globalRegistry;
     }
 
+    static #Has = ZodFunction.create(
+        [KeySchema()],
+        function (this: SafeContext<any>, key) {
+            return this.#getRegistry().has(key);
+        },
+    );
+
+    static #Get = ZodOverloadedFunction.create<SafeContext<any>>()
+        .overload(
+            [KeySchema(), GetContextOptionsSchema().optional()],
+            function (key, options) {
+                return this.#getRegistry().getAsGlobalAsPossibleEntry(key).get(options);
+            },
+        )
+        .overload(
+            [z.array(KeySchema()), GetMultipleContextOptionsSchema().optional()],
+            function (contexts, options) {
+                const registry = this.#getRegistry();
+
+                return Object.fromEntries(
+                    contexts.map((key) => [
+                        key,
+                        registry
+                            .getAsGlobalAsPossibleEntry(key)
+                            .get(options?.[key as any]),
+                    ]),
+                );
+            },
+        );
+
+    static #Require = ZodFunction.create(
+        [KeySchema(), z.string().optional()],
+        function (this: SafeContext<any>, key, message) {
+            if (!this.#getRegistry().has(key)) {
+                throw new ContextNotFoundError(key as string, message);
+            }
+
+            return this.get(key)!;
+        },
+    );
+
+    static #Set = ZodOverloadedFunction.create<SafeContext<any>>()
+        .overload(
+            [KeySchema(), z.any(), SetContextOptionsSchema().optional()],
+            function (key, context, options) {
+                const registry = this.#getRegistry();
+                const entry = options?.local
+                    ? registry.getLocalEntry(key)
+                    : registry.getAsGlobalAsPossibleEntry(key);
+
+                try {
+                    return entry.set(context, { ...(options ?? {}), force: false });
+                } catch (error: unknown) {
+                    throw error instanceof FinalOverrideError
+                        ? error.withKey(key as string)
+                        : error;
+                }
+            },
+        )
+        .overload(
+            [ContextsSchema(), SetMultipleContextOptionsSchema().optional()],
+            function (contexts, options) {
+                const registry = this.#getRegistry();
+
+                return Object.fromEntries(
+                    Object.entries(contexts).map(([key, context]) => {
+                        const entry = options?.[key]?.local
+                            ? registry.getLocalEntry(key)
+                            : registry.getAsGlobalAsPossibleEntry(key);
+
+                        try {
+                            return [
+                                key,
+                                entry.set(context, {
+                                    ...(options?.[key] ?? {}),
+                                    force: false,
+                                }),
+                            ];
+                        } catch (error: unknown) {
+                            throw error instanceof FinalOverrideError
+                                ? error.withKey(key)
+                                : error;
+                        }
+                    }),
+                );
+            },
+        );
+
+    static #With = ZodOverloadedFunction.create<SafeContext<any>>()
+        .overload(
+            [KeySchema(), z.any(), WithContextOptionsSchema().optional()],
+            function (key, context, options) {
+                return DisposableContext.create(
+                    key,
+                    context,
+                    this.#getRegistry(),
+                    options,
+                );
+            },
+        )
+        .overload(
+            [ContextsSchema(), WithMultipleContextOptionsSchema().optional()],
+            function (contexts, options) {
+                return DisposableMultipleContext.create(
+                    contexts,
+                    this.#getRegistry(),
+                    options,
+                );
+            },
+        );
+
+    static #ConcurrentlySafe = ZodFunction.create(
+        [z.function(), ConcurrentlySafeOptionsSchema().optional()],
+        function (this: SafeContext<any>, callback, options) {
+            return this.#asyncLocalStorage.run(
+                new ContextRegistry(this.#getRegistry(), this.#globalRegistry),
+                () => {
+                    const registry = this.#getRegistry();
+                    const { contexts } = options ?? {};
+
+                    (contexts === "current"
+                        ? registry.getCurrentKeys()
+                        : contexts
+                    )?.forEach((key) => void registry.getLocalEntry(key));
+
+                    return callback();
+                },
+            );
+        },
+    );
+
     /**
      * Checks if a context value is currently set without retrieving
      * it.
@@ -64,25 +203,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @param key The key to check.
      */
     has(key: keyof Dictionary): boolean {
-        return this.#getRegistry().has(key);
-    }
-
-    #get(key: string, options?: GetContextOptions<any>): GetContextReturn<any, any> {
-        return this.#getRegistry().getAsGlobalAsPossibleEntry(key).get(options);
-    }
-
-    #getMultiple(
-        contexts: string[],
-        options?: GetMultipleContextOptions<any>,
-    ): GetMultipleContextReturn<any, any> {
-        const registry = this.#getRegistry();
-
-        return Object.fromEntries(
-            contexts.map((key) => [
-                key,
-                registry.getAsGlobalAsPossibleEntry(key).get(options?.[key]),
-            ]),
-        );
+        return SafeContext.#Has.apply([key], this);
     }
 
     /**
@@ -117,8 +238,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
         options?: Options,
     ): GetMultipleContextReturn<Pick<Dictionary, Key>, Options>;
 
-    get(...args: GetArgs): any {
-        return isGetContextArgs(args) ? this.#get(...args) : this.#getMultiple(...args);
+    get(...args: any): any {
+        return SafeContext.#Get.apply(args, this);
     }
 
     /**
@@ -133,50 +254,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @throws {ContextNotFoundError} If the context is not found.
      */
     require<Key extends keyof Dictionary>(key: Key, message?: string): Dictionary[Key] {
-        if (!this.has(key)) {
-            throw new ContextNotFoundError(key as string, message);
-        }
-
-        return this.get(key)!;
-    }
-
-    #set(key: string, context: any, options?: SetContextOptions): boolean {
-        const registry = this.#getRegistry();
-        const entry = options?.local
-            ? registry.getLocalEntry(key)
-            : registry.getAsGlobalAsPossibleEntry(key);
-
-        try {
-            return entry.set(context, { ...(options ?? {}), force: false });
-        } catch (error: unknown) {
-            throw error instanceof FinalOverrideError ? error.withKey(key) : error;
-        }
-    }
-
-    #setMultiple(
-        contexts: ContextDictionary,
-        options?: SetMultipleContextOptions<any>,
-    ): SetMultipleContextReturn<any, any> {
-        const registry = this.#getRegistry();
-
-        return Object.fromEntries(
-            Object.entries(contexts).map(([key, context]) => {
-                const entry = options?.[key]?.local
-                    ? registry.getLocalEntry(key)
-                    : registry.getAsGlobalAsPossibleEntry(key);
-
-                try {
-                    return [
-                        key,
-                        entry.set(context, { ...(options?.[key] ?? {}), force: false }),
-                    ];
-                } catch (error: unknown) {
-                    throw error instanceof FinalOverrideError
-                        ? error.withKey(key)
-                        : error;
-                }
-            }),
-        );
+        return SafeContext.#Require.apply([key, message], this);
     }
 
     /**
@@ -214,23 +292,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
         Options extends SetMultipleContextOptions<Ctxs>,
     >(contexts: Ctxs, options?: Options): SetMultipleContextReturn<Ctxs, Options>;
 
-    set(...args: SetArgs): any {
-        return isSetContextArgs(args) ? this.#set(...args) : this.#setMultiple(...args);
-    }
-
-    #with(
-        key: string,
-        context: any,
-        options?: SetContextOptions,
-    ): DisposableContext<any, any> {
-        return DisposableContext.create(key, context, this.#getRegistry(), options);
-    }
-
-    #withMultiple(
-        contexts: ContextDictionary,
-        options?: SetMultipleContextOptions<any>,
-    ): DisposableMultipleContext<any, any> {
-        return DisposableMultipleContext.create(contexts, this.#getRegistry(), options);
+    set(...args: any): any {
+        return SafeContext.#Set.apply(args, this);
     }
 
     /**
@@ -277,8 +340,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
         Options extends WithMultipleContextOptions<Ctxs>,
     >(contexts: Ctxs, options?: Options): IDisposableMultipleContext<Ctxs, Options>;
 
-    with(...args: SetArgs): any {
-        return isSetContextArgs(args) ? this.#with(...args) : this.#withMultiple(...args);
+    with(...args: any): any {
+        return SafeContext.#With.apply(args, this);
     }
 
     /**
@@ -326,19 +389,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         callback: () => T,
         options: ConcurrentlySafeOptions<Dictionary> = {},
     ): T {
-        return this.#asyncLocalStorage.run(
-            new ContextRegistry(this.#getRegistry(), this.#globalRegistry),
-            () => {
-                const registry = this.#getRegistry();
-                const { contexts } = options;
-
-                (contexts === "current" ? registry.getCurrentKeys() : contexts)?.forEach(
-                    (key) => void registry.getLocalEntry(key),
-                );
-
-                return callback();
-            },
-        );
+        return SafeContext.#ConcurrentlySafe.apply([callback, options], this) as T;
     }
 
     /**
