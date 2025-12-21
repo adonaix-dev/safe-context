@@ -40,7 +40,7 @@ function getOptions(
                 }),
             ],
             // @ts-ignore
-            external: [...(pkg.dependencies ?? [])],
+            external: [...Object.keys(pkg.dependencies ?? {})],
         } satisfies RollupOptions,
         options,
     );
