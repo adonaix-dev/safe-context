@@ -1,7 +1,7 @@
 import type { key } from "@adonaix/types";
 
 import { MissingDependencyError } from "~/Error/MissingDependencyError";
-import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
+import { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 import type { ContextRegistry } from "~/Registry/ContextRegistry";
 import type { ContextEntry } from "~/Registry/Entry/ContextEntry";
 import type { ContextEntrySetOptions } from "~/Registry/Entry/Types/ContextEntrySetOptions";
@@ -10,10 +10,9 @@ import type { DisposableContext as IDisposableContext } from "~/Types/Disposable
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 
-class DisposableContext<
-    Type,
-    Options extends WithContextOptions,
-> implements IDisposableContext<Type, Options> {
+class DisposableContext<Type, Options extends WithContextOptions>
+    implements IDisposableContext<Type, Options>
+{
     readonly #snapshot?: ContextEntrySnapshot<Type>;
     readonly #entry: ContextEntry<Type>;
     readonly #changed: boolean;
@@ -55,7 +54,7 @@ class DisposableContext<
                 force: false,
             });
         } catch (error: unknown) {
-            throw error instanceof FinalOverrideError
+            throw error instanceof FinalContextMutationError
                 ? error.withKey(key as string)
                 : error;
         }

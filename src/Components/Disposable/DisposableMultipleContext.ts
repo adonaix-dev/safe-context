@@ -1,7 +1,7 @@
 import type { Mutable } from "@adonaix/types";
 
 import { MissingDependencyError } from "~/Error/MissingDependencyError";
-import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
+import { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 import type { ContextRegistry } from "~/Registry/ContextRegistry";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
@@ -11,14 +11,14 @@ import type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextS
 import { DisposableContext } from "./DisposableContext";
 
 class DisposableMultipleContext<
-    Arg extends ContextDictionary,
-    Options extends WithMultipleContextOptions<Arg>,
-> implements IDisposableMultipleContext<Arg, Options> {
+    Ctxs extends ContextDictionary,
+    Options extends WithMultipleContextOptions<Ctxs>,
+> implements IDisposableMultipleContext<Ctxs, Options> {
     readonly #stack = new DisposableStack();
 
     private constructor(
         stack: DisposableStack,
-        readonly scope: WithMultipleContextScope<Arg, Options>,
+        readonly scope: WithMultipleContextScope<Ctxs, Options>,
     ) {
         this.#stack = stack;
     }
@@ -54,7 +54,7 @@ class DisposableMultipleContext<
                 } catch (error: unknown) {
                     stack.dispose();
 
-                    throw error instanceof FinalOverrideError
+                    throw error instanceof FinalContextMutationError
                         ? error.withKey(key as string)
                         : error;
                 }

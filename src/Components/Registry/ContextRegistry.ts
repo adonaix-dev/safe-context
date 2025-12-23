@@ -1,6 +1,8 @@
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 
 import { ContextEntry } from "./Entry/ContextEntry";
+import { FinalContextMutationError } from "./Entry/Error/FinalContextMutationError";
+import { FinalContextMutationType } from "./Entry/Error/FinalContextMutationType";
 
 class ContextRegistry<Dictionary extends ContextDictionary> {
     private readonly registryMap: Map<
@@ -16,10 +18,14 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
     private getExistingEntry<Key extends keyof Dictionary>(
         key: Key,
     ): ContextEntry<Dictionary[Key]> | undefined {
-        if (this.registryMap.has(key)) {
-            return this.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
+        let registry: ContextRegistry<Dictionary> | undefined = this;
+
+        while (registry) {
+            if (registry.registryMap.has(key)) {
+                return registry.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
+            }
+            registry = registry.parent;
         }
-        return this.parent?.getExistingEntry(key);
     }
 
     getAsGlobalAsPossibleEntry<Key extends keyof Dictionary>(
@@ -48,22 +54,52 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
     }
 
     getCurrentKeys(): Set<keyof Dictionary> {
-        const keys = new Set(this.registryMap.keys());
+        const keys = new Set<keyof Dictionary>();
+        let registry: ContextRegistry<Dictionary> | undefined = this;
 
-        this.parent?.getCurrentKeys()?.forEach((key) => keys.add(key));
+        while (registry) {
+            for (const [key, entry] of registry.registryMap) {
+                if (entry.isSet()) {
+                    keys.add(key);
+                }
+            }
+            registry = registry.parent;
+        }
+
         return keys;
     }
 
     has(key: keyof Dictionary): boolean {
-        return this.registryMap.has(key) || (this.parent?.has(key) ?? false);
+        let registry: ContextRegistry<Dictionary> | undefined = this;
+
+        while (registry) {
+            if (registry.registryMap.has(key) && registry.registryMap.get(key)!.isSet()) {
+                return true;
+            }
+            registry = registry.parent;
+        }
+
+        return false;
     }
 
     clear(): void {
-        this.registryMap.forEach((entry, key) => {
+        for (const entry of this.registryMap.values()) {
             if (!entry.isFinal()) {
-                this.registryMap.delete(key);
+                entry.unset();
             }
-        });
+        }
+    }
+
+    clearEntry(key: keyof Dictionary): void {
+        const entry = this.registryMap.get(key);
+
+        if (entry?.isFinal()) {
+            throw new FinalContextMutationError(FinalContextMutationType.Clear).withKey(
+                key as string,
+            );
+        }
+
+        entry?.unset();
     }
 }
 

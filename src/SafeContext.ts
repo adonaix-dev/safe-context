@@ -9,7 +9,7 @@ import { DisposableContext } from "~/Disposable/DisposableContext";
 import { DisposableMultipleContext } from "~/Disposable/DisposableMultipleContext";
 import { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
-import { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
+import { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 import { ContextsSchema } from "~/Schema/Contexts";
 import { KeySchema } from "~/Schema/Key";
 import { ConcurrentlySafeOptionsSchema } from "~/Schema/Options/ConcurrentlySafeOptions";
@@ -51,7 +51,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     readonly #asyncLocalStorage: AsyncLocalStorage<ContextRegistry<Dictionary>> =
         new AsyncLocalStorage();
 
-    readonly #hideKeys: boolean | (keyof Dictionary)[] = false;
+    readonly #hideKeys: boolean | Set<keyof Dictionary> = false;
 
     /**
      * @param options Configuration for the new instance.
@@ -119,7 +119,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 try {
                     return entry.set(context, { ...(options ?? {}), force: false });
                 } catch (error: unknown) {
-                    throw error instanceof FinalOverrideError
+                    throw error instanceof FinalContextMutationError
                         ? error.withKey(key as string)
                         : error;
                 }
@@ -145,7 +145,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                                 }),
                             ];
                         } catch (error: unknown) {
-                            throw error instanceof FinalOverrideError
+                            throw error instanceof FinalContextMutationError
                                 ? error.withKey(key)
                                 : error;
                         }
@@ -184,7 +184,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 new ContextRegistry(this.#getRegistry(), this.#globalRegistry),
                 () => {
                     const registry = this.#getRegistry();
-                    const { contexts } = options ?? {};
+                    const { contexts } = options;
 
                     (contexts === "current"
                         ? registry.getCurrentKeys()
@@ -196,6 +196,35 @@ class SafeContext<Dictionary extends ContextDictionary> {
             );
         },
     );
+
+    static #Clear = ZodOverloadedFunction.create<SafeContext<any>>()
+        .overload([KeySchema()], function (key) {
+            this.#getRegistry().clearEntry(key);
+        })
+        .overload([z.array(KeySchema())], function (keys) {
+            const registry = this.#getRegistry();
+
+            for (const key of keys) {
+                registry.clearEntry(key);
+            }
+        })
+        .overload([], function () {
+            this.#getRegistry().clear();
+        });
+
+    #getCurrentKeys(): (keyof Dictionary)[] {
+        const hideKeys = this.#hideKeys;
+        if (hideKeys === true) {
+            return [];
+        }
+
+        const currentKeys = [...this.#getRegistry().getCurrentKeys()];
+        if (hideKeys === false) {
+            return currentKeys;
+        }
+
+        return currentKeys.filter((key) => !hideKeys.has(key));
+    }
 
     /**
      * Checks if a context value is currently set without retrieving
@@ -274,7 +303,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *
      * @returns `true` if the context was successfully set, or `false`
      *   otherwise.
-     * @throws {FinalOverrideError} If attempting to override a
+     * @throws {FinalContextMutationError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
      * @throws {OverloadsError} If no overload matches the provided
      *   arguments.
@@ -294,7 +323,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *
      * @returns An object containing the result of each individual set
      *   operation.
-     * @throws {FinalOverrideError} If attempting to override a
+     * @throws {FinalContextMutationError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
      * @throws {OverloadsError} If no overload matches the provided
      *   arguments.
@@ -319,7 +348,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *
      * @returns A {@link IDisposableContext `DisposableContext`} object
      *   to be used in a `using` statement.
-     * @throws {FinalOverrideError} If attempting to override a
+     * @throws {FinalContextMutationError} If attempting to override a
      *   context marked as {@link SetContextOptions.final `final`}.
      * @throws {MissingDependencyError} If the
      *   {@link Symbol.dispose `Symbol.dispose`} feature is not
@@ -344,8 +373,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @returns A
      *   {@link IDisposableMultipleContext `DisposableMultipleContext`}
      *   object to be used in a `using` statement.
-     * @throws {FinalOverrideError} If attempting to override any
-     *   context marked as {@link SetContextOptions.final `final`}.
+     * @throws {FinalContextMutationError} If attempting to override
+     *   any context marked as
+     *   {@link SetContextOptions.final `final`}.
      * @throws {MissingDependencyError} If the
      *   {@link Symbol.dispose `Symbol.dispose`} or the
      *   {@link DisposableStack `DisposableStack`} features are not
@@ -370,21 +400,18 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @returns A partial dictionary with the current values.
      */
     snapshot(): ContextSnapshot<Dictionary> {
-        const registry = this.#getRegistry();
-        const currentKeys = registry.getCurrentKeys();
         const hideKeys = this.#hideKeys;
-
         if (hideKeys === true) {
             return {};
         }
 
-        const keysToHide =
-            hideKeys && !Array.isArray(hideKeys) ? currentKeys : new Set(hideKeys || []);
+        const registry = this.#getRegistry();
 
         return Object.fromEntries(
-            [...currentKeys]
-                .filter((key) => !keysToHide.has(key))
-                .map((key) => [key, registry.getAsGlobalAsPossibleEntry(key).get()]),
+            this.#getCurrentKeys().map((key) => [
+                key,
+                registry.getAsGlobalAsPossibleEntry(key).get(),
+            ]),
         ) as any;
     }
 
@@ -414,10 +441,37 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     /**
-     * Clears all non-final entries from the current context registry.
+     * Clears all non-final entries from the current local context
+     * registry.
      */
-    clear(): void {
-        this.#getRegistry().clear();
+    clear(): void;
+
+    /**
+     * Clears only one specified key from the current local context
+     * registry.
+     *
+     * @param key The key to clear.
+     * @throws {FinalContextMutationError} If attempting to clear a
+     *   context marked as {@link SetContextOptions.final `final`}.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
+     */
+    clear(key: keyof Dictionary): void;
+
+    /**
+     * Clears one or more specified keys from the current local
+     * context registry.
+     *
+     * @param keys The keys to clear.
+     * @throws {FinalContextMutationError} If attempting to clear a
+     *   context marked as {@link SetContextOptions.final `final`}.
+     * @throws {OverloadsError} If no overload matches the provided
+     *   arguments.
+     */
+    clear(keys: (keyof Dictionary)[]): void;
+
+    clear(...args: any): any {
+        SafeContext.#Clear.apply(args, this);
     }
 
     /**
@@ -426,15 +480,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @internal
      */
     [INSPECT](): string {
-        const currentKeys = this.#getRegistry().getCurrentKeys();
-
-        const hideKeys = this.#hideKeys;
-        const keysToHide =
-            hideKeys && !Array.isArray(hideKeys) ? currentKeys : new Set(hideKeys || []);
-
-        const keys = [...currentKeys].filter((key) => !keysToHide.has(key)) as string[];
-
-        return `SafeContext { ${keys.length ? keys.map((key) => `'${key}'`).join(", ") : "..."} }`;
+        return `SafeContext { ${(this.#getCurrentKeys() as string[]).map((key) => `'${key}'`).join(", ") || "..."} }`;
     }
 }
 

@@ -22,6 +22,8 @@ export type { ContextSnapshot } from "~/Types/ContextSnapshot";
 export { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 export { MissingDependencyError } from "~/Error/MissingDependencyError";
 export { SafeContextError } from "~/Error/SafeContextError";
-export { FinalOverrideError } from "~/Registry/Entry/Error/FinalOverrideError";
+
+export { FinalContextMutationType } from "~/Registry/Entry/Error/FinalContextMutationType";
+export { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 
 export { SafeContext } from "./SafeContext";

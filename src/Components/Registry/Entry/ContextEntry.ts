@@ -1,7 +1,8 @@
 import type { GetContextOptions } from "~/Types/Get/GetContextOptions";
 
 import { ContextEntryState } from "./ContextEntryState";
-import { FinalOverrideError } from "./Error/FinalOverrideError";
+import { FinalContextMutationError } from "./Error/FinalContextMutationError";
+import { FinalContextMutationType } from "./Error/FinalContextMutationType";
 import type { ContextEntrySetOptions } from "./Types/ContextEntrySetOptions";
 import type { ContextEntrySnapshot } from "./Types/ContextEntrySnapshot";
 
@@ -12,6 +13,10 @@ class ContextEntry<Type> {
 
     isFinal(): boolean {
         return this.final;
+    }
+
+    isSet(): boolean {
+        return this.state === ContextEntryState.Set;
     }
 
     get(options: GetContextOptions<Type> = {}): Type | undefined {
@@ -35,7 +40,7 @@ class ContextEntry<Type> {
         if (this.state === ContextEntryState.Set) {
             if (!override) return false;
             else if (this.final && !force) {
-                throw new FinalOverrideError();
+                throw new FinalContextMutationError(FinalContextMutationType.Set);
             }
         }
 
