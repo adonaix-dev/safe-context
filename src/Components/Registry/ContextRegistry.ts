@@ -15,16 +15,22 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
         private readonly globalRegistry: ContextRegistry<Dictionary> = this,
     ) {}
 
-    private getExistingEntry<Key extends keyof Dictionary>(
-        key: Key,
-    ): ContextEntry<Dictionary[Key]> | undefined {
+    private *registries(): Generator<ContextRegistry<Dictionary>> {
         let registry: ContextRegistry<Dictionary> | undefined = this;
 
         while (registry) {
+            yield registry;
+            registry = registry.parent;
+        }
+    }
+
+    private getExistingEntry<Key extends keyof Dictionary>(
+        key: Key,
+    ): ContextEntry<Dictionary[Key]> | undefined {
+        for (const registry of this.registries()) {
             if (registry.registryMap.has(key)) {
                 return registry.registryMap.get(key) as ContextEntry<Dictionary[Key]>;
             }
-            registry = registry.parent;
         }
     }
 
@@ -55,28 +61,22 @@ class ContextRegistry<Dictionary extends ContextDictionary> {
 
     getCurrentKeys(): Set<keyof Dictionary> {
         const keys = new Set<keyof Dictionary>();
-        let registry: ContextRegistry<Dictionary> | undefined = this;
 
-        while (registry) {
+        for (const registry of this.registries())
             for (const [key, entry] of registry.registryMap) {
                 if (entry.isSet()) {
                     keys.add(key);
                 }
             }
-            registry = registry.parent;
-        }
 
         return keys;
     }
 
     has(key: keyof Dictionary): boolean {
-        let registry: ContextRegistry<Dictionary> | undefined = this;
-
-        while (registry) {
-            if (registry.registryMap.has(key) && registry.registryMap.get(key)!.isSet()) {
-                return true;
+        for (const registry of this.registries()) {
+            if (registry.registryMap.has(key)) {
+                return registry.registryMap.get(key)!.isSet();
             }
-            registry = registry.parent;
         }
 
         return false;

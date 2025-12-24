@@ -58,6 +58,17 @@ describe("class SafeContext()", () => {
             });
         });
 
+        it("Should respect shadowing when local key is unset", () => {
+            context.set("name", "Global");
+
+            context.concurrentlySafe(() => {
+                context.set("name", "Local", { local: true });
+                context.clear("name");
+
+                expect(context.has("name")).toBe(false);
+            });
+        });
+
         it("Type-check: should throw for invalid arguments", () => {
             expect(() => context.has(123 as any)).toThrow(ArgumentsError);
         });
