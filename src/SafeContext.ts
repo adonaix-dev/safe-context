@@ -15,6 +15,7 @@ import { KeySchema } from "~/Schema/Key";
 import { ConcurrentlySafeOptionsSchema } from "~/Schema/Options/ConcurrentlySafeOptions";
 import { GetContextOptionsSchema } from "~/Schema/Options/GetContextOptions";
 import { GetMultipleContextOptionsSchema } from "~/Schema/Options/GetMultipleContextOptions";
+import { SafeContextOptionsSchema } from "~/Schema/Options/SafeContextOptions";
 import { SetContextOptionsSchema } from "~/Schema/Options/SetContextOptions";
 import { SetMultipleContextOptionsSchema } from "~/Schema/Options/SetMultipleContextOptions";
 import { WithContextOptionsSchema } from "~/Schema/Options/WithContextOptions";
@@ -53,13 +54,28 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     readonly #hideKeys: boolean | Set<keyof Dictionary> = false;
 
+    private constructor(options?: SafeContextOptions<Dictionary>) {
+        if (options?.hideKeys) {
+            this.#hideKeys = Array.isArray(options.hideKeys)
+                ? new Set(options.hideKeys)
+                : options.hideKeys;
+        }
+    }
+
+    static #Create = ZodFunction.create(
+        [SafeContextOptionsSchema().optional()],
+        (options) => new SafeContext(options),
+    );
+
     /**
+     * Creates a new {@link SafeContext `SafeContext`} instance.
+     *
      * @param options Configuration for the new instance.
      */
-    constructor(options?: SafeContextOptions<Dictionary>) {
-        if (options?.hideKeys) {
-            this.#hideKeys = options.hideKeys;
-        }
+    static create<Dictionary extends ContextDictionary>(
+        options?: SafeContextOptions<Dictionary>,
+    ): SafeContext<Dictionary> {
+        return SafeContext.#Create.apply([options]);
     }
 
     #getRegistry(): ContextRegistry<Dictionary> {

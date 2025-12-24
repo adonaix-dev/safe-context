@@ -14,7 +14,7 @@ class ContextNotFoundError extends SafeContextError {
      * @param message A custom error message provided by the caller.
      */
     constructor(key: string, message?: string) {
-        super(message ?? `context with key '${key}' is required but was not found`);
+        super(message ?? `context with key '${key}' was required but was not found`);
     }
 }
 
