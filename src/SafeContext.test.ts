@@ -550,6 +550,72 @@ describe("class SafeContext", () => {
                 recurse(1);
                 expect(context.get("recursive")).toBe(0);
             });
+
+            it("Should respect global final locks in real-time between siblings (Sister vs. Sister)", async () => {
+                context.set("shared", "Initial");
+
+                let unlockA: () => void;
+                const signalA = new Promise<void>((r) => (unlockA = r));
+
+                const processA = context.concurrentlySafe(async () => {
+                    using _ = context.with("shared", "LOCKED_BY_A", {
+                        local: false,
+                        final: true,
+                    });
+                    await signalA;
+                });
+
+                await Bun.sleep(5);
+                expect(context.get("shared")).toBe("LOCKED_BY_A");
+
+                await context.concurrentlySafe(async () => {
+                    expect(() => {
+                        context.set("shared", "Attempt_B", { local: true });
+                    }).toThrow(FinalContextMutationError);
+
+                    unlockA();
+                    await processA;
+
+                    expect(() => {
+                        context.set("shared", "Success_B", { local: true });
+                    }).not.toThrow();
+
+                    expect(context.get("shared")).toBe("Success_B");
+                });
+
+                expect(context.get("shared")).toBe("Initial");
+            });
+
+            it("Should demonstrate the 'Last Write/Dispose Wins' hazard with local: false (Blind Restoration)", async () => {
+                context.set("num", 0);
+
+                let finishA!: () => void;
+                let finishB!: () => void;
+                const waitForA = new Promise<void>((r) => (finishA = r));
+                const waitForB = new Promise<void>((r) => (finishB = r));
+
+                const processA = context.concurrentlySafe(async () => {
+                    using _ = context.with("num", 10, { local: false });
+                    await waitForA;
+                });
+                await Bun.sleep(1);
+                expect(context.get("num")).toBe(10);
+
+                const processB = context.concurrentlySafe(async () => {
+                    using _ = context.with("num", 20, { local: false });
+                    await waitForB;
+                });
+                await Bun.sleep(1);
+                expect(context.get("num")).toBe(20);
+
+                finishA();
+                await processA;
+                expect(context.get("num")).toBe(0);
+
+                finishB();
+                await processB;
+                expect(context.get("num")).toBe(10);
+            });
         });
 
         describe("Error Handling", () => {
