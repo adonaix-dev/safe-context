@@ -8,11 +8,7 @@
         "target": "es2023",
         "paths": {
             "~/*": [
-                "./src/Components/*",
-                "./src/Polyfill/*"
-            ],
-            "pkg/*": [
-                "./*"
+                "./src/Components/*"
             ],
             "it": [
                 "./src"
