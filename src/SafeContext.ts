@@ -41,10 +41,13 @@ import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContex
 const INSPECT: typeof inspect.custom = inspect.custom;
 
 /**
- * A concurrency-safe context manager powered by
- * {@link AsyncLocalStorage `AsyncLocalStorage`}. It allows setting and
- * getting values that can be global or scoped to a specific
- * asynchronous execution path.
+ * A type-safe, concurrency-aware context manager powered by
+ * {@link AsyncLocalStorage `AsyncLocalStorage`}.
+ *
+ * It manages execution context through a hierarchical registry
+ * system, allowing values to be stored either globally or scoped to
+ * specific asynchronous execution paths. It prevents illegal
+ * mutations of immutable (final) contexts.
  *
  * @template Dictionary A type describing the shape of the context.
  */
@@ -72,6 +75,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * Creates a new {@link SafeContext `SafeContext`} instance.
      *
      * @param options Configuration for the new instance.
+     * @throws {ArgumentsError} If
+     *   {@link SafeContextOptions.hideKeys `hideKeys`} is not `true`
+     *   or of type `string[]`.
      */
     static create<Dictionary extends ContextDictionary>(
         options?: SafeContextOptions<Dictionary>,
@@ -234,6 +240,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * it.
      *
      * @param key The key to check.
+     *
+     * @returns `true` if the key exists in the registry, `false`
+     *   otherwise.
      * @throws {ArgumentsError} If {@link key `key`} is not a string.
      */
     has(key: keyof Dictionary): boolean {
