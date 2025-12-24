@@ -2,6 +2,7 @@ import type { Mutable } from "@adonaix/types";
 
 import { MissingDependencyError } from "~/Error/MissingDependencyError";
 import { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
+import { mapDictionary } from "~/Util/MapDictionary";
 import type { ContextRegistry } from "~/Registry/ContextRegistry";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { DisposableMultipleContext as IDisposableMultipleContext } from "~/Types/Disposable/DisposableMultipleContext";
@@ -33,31 +34,27 @@ class DisposableMultipleContext<
     ): DisposableMultipleContext<Ctxs, Options> {
         MissingDependencyError.assert("Symbol.dispose", "DisposableStack");
 
-        const scope: Mutable<WithMultipleContextScope<Ctxs, Options>> = {} as any;
         const stack = new DisposableStack();
+        const scope = mapDictionary(contexts, (context, key) => {
+            const entry =
+                (options?.[key]?.local ?? true)
+                    ? registry.getLocalEntry(key)
+                    : registry.getAsGlobalAsPossibleEntry(key);
 
-        Object.entries(contexts).forEach(
-            ([key, context]: [keyof Ctxs, Ctxs[keyof Ctxs]]) => {
-                const entry =
-                    (options?.[key]?.local ?? true)
-                        ? registry.getLocalEntry(key)
-                        : registry.getAsGlobalAsPossibleEntry(key);
+            try {
+                const disposable = new DisposableContext(entry, context, {
+                    ...(options?.[key] ?? {}),
+                    force: false,
+                });
 
-                try {
-                    const disposable = new DisposableContext(entry, context, {
-                        ...(options?.[key] ?? {}),
-                        force: false,
-                    });
+                stack.use(disposable);
+                return disposable;
+            } catch (error: unknown) {
+                stack.dispose();
 
-                    stack.use(disposable);
-                    scope[key] = disposable;
-                } catch (error: unknown) {
-                    stack.dispose();
-
-                    throw (error as FinalContextMutationError).withKey(key as string);
-                }
-            },
-        );
+                throw (error as FinalContextMutationError).withKey(key as string);
+            }
+        });
 
         return new DisposableMultipleContext(stack, Object.freeze(scope));
     }

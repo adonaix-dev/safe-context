@@ -19,6 +19,8 @@ import { SetContextOptionsSchema } from "~/Schema/Options/SetContextOptions";
 import { SetMultipleContextOptionsSchema } from "~/Schema/Options/SetMultipleContextOptions";
 import { WithContextOptionsSchema } from "~/Schema/Options/WithContextOptions";
 import { WithMultipleContextOptionsSchema } from "~/Schema/Options/WithMultipleContextOptions";
+import { mapDictionary } from "~/Util/MapDictionary";
+import { mapKeys } from "~/Util/MapKeys";
 import type { ConcurrentlySafeOptions } from "~/Types/ConcurrentlySafeOptions";
 import type { ContextDictionary } from "~/Types/ContextDictionary";
 import type { ContextSnapshot } from "~/Types/ContextSnapshot";
@@ -100,13 +102,8 @@ class SafeContext<Dictionary extends ContextDictionary> {
             function (contexts, options) {
                 const registry = this.#getRegistry();
 
-                return Object.fromEntries(
-                    contexts.map((key) => [
-                        key,
-                        registry
-                            .getAsGlobalAsPossibleEntry(key)
-                            .get(options?.[key as any]),
-                    ]),
+                return mapKeys(contexts, (key) =>
+                    registry.getAsGlobalAsPossibleEntry(key).get(options?.[key]),
                 );
             },
         );
@@ -115,7 +112,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         [z.string(), z.string().optional()],
         function (this: SafeContext<any>, key, message) {
             if (!this.#getRegistry().has(key)) {
-                throw new ContextNotFoundError(key as string, message);
+                throw new ContextNotFoundError(key, message);
             }
 
             return this.get(key)!;
@@ -143,25 +140,20 @@ class SafeContext<Dictionary extends ContextDictionary> {
             function (contexts, options) {
                 const registry = this.#getRegistry();
 
-                return Object.fromEntries(
-                    Object.entries(contexts).map(([key, context]) => {
-                        const entry = options?.[key]?.local
-                            ? registry.getLocalEntry(key)
-                            : registry.getAsGlobalAsPossibleEntry(key);
+                return mapDictionary(contexts, (context, key) => {
+                    const entry = options?.[key]?.local
+                        ? registry.getLocalEntry(key)
+                        : registry.getAsGlobalAsPossibleEntry(key);
 
-                        try {
-                            return [
-                                key,
-                                entry.set(context, {
-                                    ...(options?.[key] ?? {}),
-                                    force: false,
-                                }),
-                            ];
-                        } catch (error: unknown) {
-                            throw (error as FinalContextMutationError).withKey(key);
-                        }
-                    }),
-                );
+                    try {
+                        return entry.set(context, {
+                            ...(options?.[key] ?? {}),
+                            force: false,
+                        });
+                    } catch (error: unknown) {
+                        throw (error as FinalContextMutationError).withKey(key);
+                    }
+                });
             },
         );
 
@@ -418,12 +410,9 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
         const registry = this.#getRegistry();
 
-        return Object.fromEntries(
-            this.#getCurrentKeys().map((key) => [
-                key,
-                registry.getAsGlobalAsPossibleEntry(key).get(),
-            ]),
-        ) as any;
+        return mapKeys(this.#getCurrentKeys(), (key) =>
+            registry.getAsGlobalAsPossibleEntry(key).get(),
+        );
     }
 
     /**
