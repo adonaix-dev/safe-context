@@ -54,9 +54,7 @@ class DisposableMultipleContext<
                 } catch (error: unknown) {
                     stack.dispose();
 
-                    throw error instanceof FinalContextMutationError
-                        ? error.withKey(key as string)
-                        : error;
+                    throw (error as FinalContextMutationError).withKey(key as string);
                 }
             },
         );

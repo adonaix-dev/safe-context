@@ -9,7 +9,6 @@ import type { WithContextReturn } from "~/Types/With/WithContextReturn";
  * guarantee that the context is reverted after the scope ends.
  */
 interface DisposableContext<Type, Options extends WithContextOptions>
-    extends Disposable,
-        WithContextReturn<Type, Options> {}
+    extends Disposable, WithContextReturn<Type, Options> {}
 
 export type { DisposableContext };

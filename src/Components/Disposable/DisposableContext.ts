@@ -10,9 +10,10 @@ import type { DisposableContext as IDisposableContext } from "~/Types/Disposable
 import type { WithContextChanged } from "~/Types/With/WithContextChanged";
 import type { WithContextOptions } from "~/Types/With/WithContextOptions";
 
-class DisposableContext<Type, Options extends WithContextOptions>
-    implements IDisposableContext<Type, Options>
-{
+class DisposableContext<
+    Type,
+    Options extends WithContextOptions,
+> implements IDisposableContext<Type, Options> {
     readonly #snapshot?: ContextEntrySnapshot<Type>;
     readonly #entry: ContextEntry<Type>;
     readonly #changed: boolean;
@@ -54,9 +55,7 @@ class DisposableContext<Type, Options extends WithContextOptions>
                 force: false,
             });
         } catch (error: unknown) {
-            throw error instanceof FinalContextMutationError
-                ? error.withKey(key as string)
-                : error;
+            throw (error as FinalContextMutationError).withKey(key as string);
         }
     }
 

@@ -11,7 +11,6 @@ import { ContextNotFoundError } from "~/Error/ContextNotFoundError";
 import { ContextRegistry } from "~/Registry/ContextRegistry";
 import { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 import { ContextsSchema } from "~/Schema/Contexts";
-import { KeySchema } from "~/Schema/Key";
 import { ConcurrentlySafeOptionsSchema } from "~/Schema/Options/ConcurrentlySafeOptions";
 import { GetContextOptionsSchema } from "~/Schema/Options/GetContextOptions";
 import { GetMultipleContextOptionsSchema } from "~/Schema/Options/GetMultipleContextOptions";
@@ -83,7 +82,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
     }
 
     static #Has = ZodFunction.create(
-        [KeySchema()],
+        [z.string()],
         function (this: SafeContext<any>, key) {
             return this.#getRegistry().has(key);
         },
@@ -91,13 +90,13 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     static #Get = ZodOverloadedFunction.create<SafeContext<any>>()
         .overload(
-            [KeySchema(), GetContextOptionsSchema().optional()],
+            [z.string(), GetContextOptionsSchema().optional()],
             function (key, options) {
                 return this.#getRegistry().getAsGlobalAsPossibleEntry(key).get(options);
             },
         )
         .overload(
-            [z.array(KeySchema()), GetMultipleContextOptionsSchema().optional()],
+            [z.array(z.string()), GetMultipleContextOptionsSchema().optional()],
             function (contexts, options) {
                 const registry = this.#getRegistry();
 
@@ -113,7 +112,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
         );
 
     static #Require = ZodFunction.create(
-        [KeySchema(), z.string().optional()],
+        [z.string(), z.string().optional()],
         function (this: SafeContext<any>, key, message) {
             if (!this.#getRegistry().has(key)) {
                 throw new ContextNotFoundError(key as string, message);
@@ -125,7 +124,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     static #Set = ZodOverloadedFunction.create<SafeContext<any>>()
         .overload(
-            [KeySchema(), z.any(), SetContextOptionsSchema().optional()],
+            [z.string(), z.any(), SetContextOptionsSchema().optional()],
             function (key, context, options) {
                 const registry = this.#getRegistry();
                 const entry = options?.local
@@ -135,9 +134,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                 try {
                     return entry.set(context, { ...(options ?? {}), force: false });
                 } catch (error: unknown) {
-                    throw error instanceof FinalContextMutationError
-                        ? error.withKey(key as string)
-                        : error;
+                    throw (error as FinalContextMutationError).withKey(key);
                 }
             },
         )
@@ -161,9 +158,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
                                 }),
                             ];
                         } catch (error: unknown) {
-                            throw error instanceof FinalContextMutationError
-                                ? error.withKey(key)
-                                : error;
+                            throw (error as FinalContextMutationError).withKey(key);
                         }
                     }),
                 );
@@ -172,7 +167,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
 
     static #With = ZodOverloadedFunction.create<SafeContext<any>>()
         .overload(
-            [KeySchema(), z.any(), WithContextOptionsSchema().optional()],
+            [z.string(), z.any(), WithContextOptionsSchema().optional()],
             function (key, context, options) {
                 return DisposableContext.create(
                     key,
@@ -214,10 +209,10 @@ class SafeContext<Dictionary extends ContextDictionary> {
     );
 
     static #Clear = ZodOverloadedFunction.create<SafeContext<any>>()
-        .overload([KeySchema()], function (key) {
+        .overload([z.string()], function (key) {
             this.#getRegistry().clearEntry(key);
         })
-        .overload([z.array(KeySchema())], function (keys) {
+        .overload([z.array(z.string())], function (keys) {
             const registry = this.#getRegistry();
 
             for (const key of keys) {
@@ -250,7 +245,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @throws {ArgumentsError} If {@link key `key`} is not a string.
      */
     has(key: keyof Dictionary): boolean {
-        return SafeContext.#Has.apply([key], this);
+        return SafeContext.#Has.apply([key as string], this);
     }
 
     /**
@@ -307,7 +302,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   if {@link message `message`} is passed but it's not a string.
      */
     require<Key extends keyof Dictionary>(key: Key, message?: string): Dictionary[Key] {
-        return SafeContext.#Require.apply([key, message], this);
+        return SafeContext.#Require.apply([key as string, message], this);
     }
 
     /**
