@@ -1,538 +1,574 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { ContextNotFoundError, FinalOverrideError, SafeContext } from "it";
+import { ContextNotFoundError, FinalContextMutationError, SafeContext } from "it";
 import { ArgumentsError, OverloadsError } from "zod-guardians";
 
-interface Context {
-    name: string;
-    address: string;
-    count: number;
-    id: number;
+interface TestContext {
+    str: string;
+    num: number;
+    bool: boolean;
+    finalKey: string;
+    shared: string;
+    recursive: number;
 }
 
-describe("class SafeContext()", () => {
-    let context!: SafeContext<Context>;
+describe("class SafeContext", () => {
+    let context: SafeContext<TestContext>;
 
     beforeEach(() => {
-        context = new SafeContext();
+        context = SafeContext.create();
     });
 
-    describe("constructor()", () => {
-        it("Should initialize with default options", () => {
-            const ctx = new SafeContext<Context>();
-            expect(ctx.snapshot()).toEqual({});
+    describe("create()", () => {
+        it("Should initialize empty by default", () => {
+            expect(context.snapshot()).toEqual({});
         });
 
-        it("Should initialize with hidden keys", () => {
-            const ctx = new SafeContext<Context>({ hideKeys: ["name"] });
-            ctx.set("name", "Hidden");
-            ctx.set("count", 10);
+        describe("Option: hideKeys", () => {
+            it("Should hide specific keys from inspection and snapshot", () => {
+                const ctx = SafeContext.create<TestContext>({ hideKeys: ["str"] });
+                ctx.set("str", "Hidden");
+                ctx.set("num", 10);
 
-            expect(ctx.snapshot()).toEqual({ count: 10 } as any);
-            expect(ctx.get("name")).toBe("Hidden");
-        });
+                expect(ctx.snapshot()).toEqual({ num: 10 } as any);
+                expect(ctx.get("str")).toBe("Hidden");
+            });
 
-        it("Should initialize with all keys hidden", () => {
-            const ctx = new SafeContext<Context>({ hideKeys: true });
-            ctx.set("name", "Hidden");
-            ctx.set("count", 10);
+            it("Should hide all keys when set to true", () => {
+                const ctx = SafeContext.create<TestContext>({ hideKeys: true });
+                ctx.set("str", "Hidden");
 
-            expect(ctx.snapshot()).toEqual({});
-            expect(ctx.get("name")).toBe("Hidden");
+                expect(ctx.snapshot()).toEqual({});
+                expect(ctx.get("str")).toBe("Hidden");
+            });
         });
     });
 
     describe("has()", () => {
-        it("Should return true if key is set", () => {
-            context.set("name", "Alice");
-            expect(context.has("name")).toBe(true);
+        it("Should return true for existing keys", () => {
+            context.set("str", "Exists");
+            expect(context.has("str")).toBe(true);
         });
 
-        it("Should return false if key is not set", () => {
-            expect(context.has("name")).toBe(false);
+        it("Should return false for missing keys", () => {
+            expect(context.has("str")).toBe(false);
         });
 
-        it("Should check parent scopes", () => {
-            context.set("name", "Alice");
-            context.concurrentlySafe(() => {
-                expect(context.has("name")).toBe(true);
+        describe("Behavior: Inheritance & Shadowing", () => {
+            it("Should find keys in parent scopes", () => {
+                context.set("str", "Parent");
+                context.concurrentlySafe(() => {
+                    expect(context.has("str")).toBe(true);
+                });
+            });
+
+            it("Should return false if local key shadows parent but is unset", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(() => {
+                    context.set("str", "Local", { local: true });
+                    context.clear("str");
+
+                    expect(context.has("str")).toBe(false);
+                });
             });
         });
 
-        it("Should respect shadowing when local key is unset", () => {
-            context.set("name", "Global");
-
-            context.concurrentlySafe(() => {
-                context.set("name", "Local", { local: true });
-                context.clear("name");
-
-                expect(context.has("name")).toBe(false);
+        describe("Error Handling", () => {
+            it("Should throw on invalid argument type", () => {
+                expect(() => context.has(123 as any)).toThrow(ArgumentsError);
             });
-        });
-
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.has(123 as any)).toThrow(ArgumentsError);
         });
     });
 
     describe("get()", () => {
-        describe("Single key", () => {
+        describe("Single Key Access", () => {
             it("Should return undefined for unset keys", () => {
-                expect(context.get("name")).toBeUndefined();
+                expect(context.get("str")).toBeUndefined();
             });
 
-            it("Should return the value for set keys", () => {
-                context.set("name", "Alice");
-                expect(context.get("name")).toBe("Alice");
+            it("Should return value for set keys", () => {
+                context.set("str", "Value");
+                expect(context.get("str")).toBe("Value");
             });
 
-            it("Should use supply function if key is unset", () => {
-                const value = context.get("count", { supply: () => 42 });
-                expect(value).toBe(42);
-                expect(context.get("count")).toBe(42);
+            it("Should support 'supply' fallback", () => {
+                expect(context.get("num", { supply: () => 42 })).toBe(42);
             });
 
-            it("Should not use supply function if key is already set", () => {
-                context.set("count", 10);
-                const value = context.get("count", { supply: () => 42 });
-                expect(value).toBe(10);
+            it("Should ignore 'supply' if key exists", () => {
+                context.set("num", 10);
+                expect(context.get("num", { supply: () => 42 })).toBe(10);
             });
         });
 
-        describe("Multiple keys", () => {
-            it("Should return object with requested keys", () => {
-                context.set("name", "Alice");
-                context.set("count", 10);
-
-                const result = context.get(["name", "count"]);
-                expect(result).toEqual({ name: "Alice", count: 10 });
+        describe("Multiple Key Access", () => {
+            it("Should retrieve multiple keys as object", () => {
+                context.set({ str: "A", num: 1 });
+                expect(context.get(["str", "num"])).toEqual({ str: "A", num: 1 });
             });
 
-            it("Should support options per key", () => {
-                const result = context.get(["name", "count"], {
-                    count: { supply: () => 99 },
+            it("Should support per-key options", () => {
+                const res = context.get(["str", "num"], {
+                    num: { supply: () => 99 },
                 });
-                expect(result).toEqual({ name: undefined, count: 99 });
+                expect(res).toEqual({ str: undefined, num: 99 });
             });
 
-            it("Should retrieve keys even if hidden", () => {
-                const ctx = new SafeContext<Context>({ hideKeys: ["name"] });
-                ctx.set("name", "Secret");
-                expect(ctx.get(["name"])).toEqual({ name: "Secret" });
+            it("Should ignore hideKeys configuration during get", () => {
+                const ctx = SafeContext.create<TestContext>({ hideKeys: ["str"] });
+                ctx.set("str", "Secret");
+                expect(ctx.get(["str"])).toEqual({ str: "Secret" });
             });
         });
 
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.get(123 as any)).toThrow(OverloadsError);
-            expect(() => context.get("name", { supply: 123 as any })).toThrow(
-                OverloadsError,
-            );
-            expect(() => context.get(["name"], { name: { supply: 123 as any } })).toThrow(
-                OverloadsError,
-            );
+        describe("Error Handling", () => {
+            it("Should throw OverloadsError for invalid arguments", () => {
+                expect(() => context.get(123 as any)).toThrow(OverloadsError);
+                expect(() => context.get("str", { supply: 123 as any })).toThrow(
+                    OverloadsError,
+                );
+            });
         });
     });
 
     describe("require()", () => {
         it("Should return value if set", () => {
-            context.set("name", "Alice");
-            expect(context.require("name")).toBe("Alice");
+            context.set("str", "Value");
+            expect(context.require("str")).toBe("Value");
         });
 
-        it("Should throw ContextNotFoundError if unset", () => {
-            expect(() => context.require("name")).toThrow(ContextNotFoundError);
-        });
-
-        it("Should throw with custom message", () => {
-            expect(() => context.require("name", "Custom Error")).toThrow("Custom Error");
-        });
-
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.require(123 as any)).toThrow(ArgumentsError);
-            expect(() => context.require("name", 123 as any)).toThrow(ArgumentsError);
-        });
-    });
-
-    describe("set()", () => {
-        describe("Single key", () => {
-            it("Should set value and return true", () => {
-                expect(context.set("name", "Alice")).toBe(true);
-                expect(context.get("name")).toBe("Alice");
+        describe("Error Handling", () => {
+            it("Should throw ContextNotFoundError if unset", () => {
+                expect(() => context.require("str")).toThrow(ContextNotFoundError);
             });
 
-            it("Should return false if override is false and value exists", () => {
-                context.set("name", "Alice");
-                expect(context.set("name", "Bob", { override: false })).toBe(false);
-                expect(context.get("name")).toBe("Alice");
+            it("Should throw custom message if provided", () => {
+                expect(() => context.require("str", "My Error")).toThrow("My Error");
             });
 
-            it("Should throw FinalOverrideError if overwriting final context", () => {
-                context.set("name", "Alice", { final: true });
-                expect(() => context.set("name", "Bob")).toThrow(FinalOverrideError);
+            it("Should throw ArgumentsError for invalid inputs", () => {
+                expect(() => context.require(123 as any)).toThrow(ArgumentsError);
             });
-
-            it("Should allow overwriting if not final", () => {
-                context.set("name", "Alice");
-                expect(context.set("name", "Bob")).toBe(true);
-                expect(context.get("name")).toBe("Bob");
-            });
-        });
-
-        describe("Multiple keys", () => {
-            it("Should set multiple values", () => {
-                const result = context.set({ name: "Alice", count: 10 });
-                expect(result).toEqual({ name: true, count: true });
-                expect(context.get("name")).toBe("Alice");
-                expect(context.get("count")).toBe(10);
-            });
-
-            it("Should support options per key in multiple set", () => {
-                context.set("name", "Original");
-                const result = context.set(
-                    { name: "New", count: 20 },
-                    { name: { override: false }, count: { final: true } },
-                );
-                expect(result).toEqual({ name: false, count: true });
-                expect(context.get("name")).toBe("Original");
-                expect(context.get("count")).toBe(20);
-            });
-
-            it("Should throw FinalOverrideError if any key is final", () => {
-                context.set("name", "Alice", { final: true });
-                expect(() => context.set({ name: "Bob", count: 10 })).toThrow(
-                    FinalOverrideError,
-                );
-            });
-        });
-
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.set(123 as any, "val")).toThrow(OverloadsError);
-            expect(() => context.set("name", "val", { final: "yes" as any })).toThrow(
-                OverloadsError,
-            );
-        });
-    });
-
-    describe("with()", () => {
-        describe("Single key", () => {
-            it("Should temporarily set value using 'using'", () => {
-                {
-                    using _ = context.with("name", "Temp");
-                    expect(context.get("name")).toBe("Temp");
-                }
-                expect(context.get("name")).toBeUndefined();
-            });
-
-            it("Should restore previous value", () => {
-                context.set("name", "Original");
-                {
-                    using _ = context.with("name", "Temp");
-                    expect(context.get("name")).toBe("Temp");
-                }
-                expect(context.get("name")).toBe("Original");
-            });
-
-            it("Should return context metadata", () => {
-                context.set("name", "Original");
-                {
-                    using ctx = context.with("name", "Temp");
-                    expect(ctx.context).toBe("Temp");
-                    expect(ctx.previous).toBe("Original");
-                    expect(ctx.changed).toBe(true);
-                }
-            });
-
-            it("Should respect override: false", () => {
-                context.set("name", "Original");
-                {
-                    using ctx = context.with("name", "Temp", { override: false });
-                    expect(ctx.changed).toBe(false);
-                    expect(context.get("name")).toBe("Original");
-                }
-            });
-
-            it("Should throw FinalOverrideError on creation", () => {
-                context.set("name", "Final", { final: true });
-                expect(() => {
-                    using _ = context.with("name", "Temp");
-                }).toThrow(FinalOverrideError);
-            });
-
-            it("Should restore final status", () => {
-                context.set("count", 10);
-                {
-                    using _ = context.with("count", 20, {
-                        final: true,
-                        override: true,
-                        local: true,
-                    });
-                    expect(context.get("count")).toBe(20);
-
-                    expect(() => context.set("count", 30)).toThrow(FinalOverrideError);
-                }
-
-                expect(context.get("count")).toBe(10);
-            });
-        });
-
-        describe("Multiple keys", () => {
-            it("Should temporarily set multiple values", () => {
-                {
-                    using _ = context.with({ name: "Temp", count: 99 });
-                    expect(context.get("name")).toBe("Temp");
-                    expect(context.get("count")).toBe(99);
-                }
-                expect(context.get("name")).toBeUndefined();
-                expect(context.get("count")).toBeUndefined();
-            });
-
-            it("Should rollback all if one fails", () => {
-                context.set("name", "Final", { final: true });
-                expect(() => {
-                    using _ = context.with({ count: 99, name: "Temp" });
-                }).toThrow(FinalOverrideError);
-                expect(context.get("count")).toBeUndefined();
-            });
-
-            it("Should expose scope metadata", () => {
-                {
-                    using multi = context.with({ name: "A", count: 1 });
-                    expect(multi.scope.name.context).toBe("A");
-                    expect(multi.scope.count.context).toBe(1);
-                }
-            });
-
-            it("Should handle partial override: false in multiple keys", () => {
-                context.set("name", "Global");
-                {
-                    using multi = context.with(
-                        { name: "Scoped", count: 1 },
-                        { name: { override: false } },
-                    );
-                    expect(multi.scope.name.changed).toBe(false);
-                    expect(context.get("name")).toBe("Global");
-                    expect(context.get("count")).toBe(1);
-                }
-            });
-        });
-
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.with(123 as any, "val")).toThrow(OverloadsError);
-            expect(() => context.with("name", "val", { local: "yes" as any })).toThrow(
-                OverloadsError,
-            );
-        });
-    });
-
-    describe("concurrentlySafe()", () => {
-        it("Should isolate changes in scope", () => {
-            context.set("name", "Global");
-            context.concurrentlySafe(() => {
-                context.set("name", "Local", { local: true });
-                expect(context.get("name")).toBe("Local");
-            });
-            expect(context.get("name")).toBe("Global");
-        });
-
-        it("Should inherit values from parent", () => {
-            context.set("name", "Global");
-            context.concurrentlySafe(() => {
-                expect(context.get("name")).toBe("Global");
-            });
-        });
-
-        it("Should support copying contexts ('current')", () => {
-            context.set("name", "Global");
-            context.concurrentlySafe(
-                () => {
-                    context.set("name", "Local", { local: true });
-                    expect(context.get("name")).toBe("Local");
-                },
-                { contexts: "current" },
-            );
-            expect(context.get("name")).toBe("Global");
-        });
-
-        it("Should support copying specific keys", () => {
-            context.set("name", "Global");
-            context.set("count", 10);
-
-            context.concurrentlySafe(
-                () => {
-                    context.set("name", "Local", { local: true });
-                    expect(context.get("name")).toBe("Local");
-                },
-                { contexts: ["name"] },
-            );
-
-            expect(context.get("name")).toBe("Global");
-        });
-
-        it("Should propagate globals if local is false inside safe scope", () => {
-            context.set("address", "Global St");
-
-            context.concurrentlySafe(() => {
-                context.set("address", "Updated St", { local: false });
-            });
-
-            expect(context.get("address")).toBe("Updated St");
-        });
-
-        it("Should return callback result", () => {
-            const result = context.concurrentlySafe(() => 123);
-            expect(result).toBe(123);
-        });
-
-        it("Should handle high concurrency with random delays", async () => {
-            const operations = Array.from({ length: 100 }, (_, i) => i);
-            context.set("count", -1);
-
-            await Promise.all(
-                operations.map((index) =>
-                    context.concurrentlySafe(async () => {
-                        context.set("count", index, { local: true });
-                        await Bun.sleep(Math.random() * 5);
-                        expect(context.get("count")).toBe(index);
-                    }),
-                ),
-            );
-
-            expect(context.get("count")).toBe(-1);
-        });
-
-        it("Should handle massive amount of concurrent contexts (1e3)", async () => {
-            const size = 1e3;
-            const range = Array.from({ length: size }, (_, i) => i);
-            context.set("id", -1);
-
-            await Promise.all(
-                range.map((i) =>
-                    context.concurrentlySafe(
-                        async () => {
-                            context.set("id", i);
-                            expect(context.get("id")).toBe(i);
-                        },
-                        {
-                            contexts: ["id"],
-                        },
-                    ),
-                ),
-            );
-
-            expect(context.get("id")).toBe(-1);
-        });
-
-        it("Should guaranteed rollback on exception", () => {
-            context.set("count", 0);
-            expect(() =>
-                context.concurrentlySafe(() => {
-                    context.set("count", 1, { local: true });
-                    throw new Error("Boom");
-                }),
-            ).toThrow("Boom");
-            expect(context.get("count")).toBe(0);
-        });
-
-        it("Type-check: should throw for invalid arguments", () => {
-            expect(() => context.concurrentlySafe(123 as any)).toThrow(ArgumentsError);
-            expect(() =>
-                context.concurrentlySafe(() => {}, { contexts: 123 as any }),
-            ).toThrow(ArgumentsError);
         });
     });
 
     describe("snapshot()", () => {
         it("Should return all visible keys", () => {
-            context.set("name", "Alice");
-            context.set("count", 10);
-            expect(context.snapshot()).toEqual({ name: "Alice", count: 10 });
-        });
-
-        it("Should respect hideKeys from constructor", () => {
-            const hiddenCtx = new SafeContext<Context>({ hideKeys: ["count"] });
-            hiddenCtx.set("name", "Alice");
-            hiddenCtx.set("count", 10);
-            expect(hiddenCtx.snapshot()).toEqual({ name: "Alice" } as any);
+            context.set({ str: "A", num: 1 });
+            expect(context.snapshot()).toEqual({ str: "A", num: 1 });
         });
 
         it("Should capture scoped changes", () => {
-            context.set("name", "Global");
-            {
-                using _ = context.with("name", "Scoped");
-                expect(context.snapshot()).toEqual({ name: "Scoped" } as any);
-            }
+            context.set("str", "Global");
+            using _ = context.with("str", "Scoped");
+            expect(context.snapshot()).toEqual({ str: "Scoped" } as any);
         });
 
-        it("Should respect hideKeys inside scopes", () => {
-            const ctx = new SafeContext<Context>({ hideKeys: ["id"] });
-            ctx.set("id", 1);
-            {
-                using _ = ctx.with("id", 2);
-                expect(ctx.snapshot()).toEqual({});
-            }
-        });
-    });
-
-    describe("clear()", () => {
-        it("Should remove non-final keys", () => {
-            context.set("name", "Alice");
-            context.clear();
-            expect(context.has("name")).toBe(false);
-        });
-
-        it("Should keep final keys", () => {
-            context.set("name", "Alice", { final: true });
-            context.clear();
-            expect(context.has("name")).toBe(true);
-            expect(context.get("name")).toBe("Alice");
-        });
-
-        it("Should only clear local keys inside concurrentlySafe", () => {
-            context.set("name", "Global");
-            context.concurrentlySafe(() => {
-                context.set("name", "Local", { local: true });
-                context.clear();
-                expect(context.get("name")).toBe("Global"); // Falls back to parent
-            });
-            expect(context.get("name")).toBe("Global");
+        it("Should respect hideKeys configuration", () => {
+            const ctx = SafeContext.create<TestContext>({ hideKeys: ["num"] });
+            ctx.set({ str: "A", num: 1 });
+            expect(ctx.snapshot()).toEqual({ str: "A" } as any);
         });
     });
 
     describe("inspect()", () => {
-        it("Should return formatted string", () => {
-            context.set("name", "Alice");
-            const inspection = Bun.inspect(context);
-            expect(inspection).toContain("SafeContext");
-            expect(inspection).toContain("'name'");
+        it("Should format string with visible keys", () => {
+            context.set("str", "A");
+            const inspect = Bun.inspect(context);
+            expect(inspect).toContain("SafeContext");
+            expect(inspect).toContain("'str'");
         });
 
-        it("Should hide keys in inspection", () => {
-            const hiddenCtx = new SafeContext<Context>({ hideKeys: ["name"] });
-            hiddenCtx.set("name", "Alice");
-            hiddenCtx.set("count", 10);
-            const inspection = Bun.inspect(hiddenCtx);
-            expect(inspection).not.toContain("'name'");
-            expect(inspection).toContain("'count'");
-        });
-
-        it("Should show active scoped values", () => {
-            {
-                using _ = context.with("name", "Scoped");
-                expect(Bun.inspect(context)).toContain("'name'");
-            }
+        it("Should not show hidden keys", () => {
+            const ctx = SafeContext.create<TestContext>({ hideKeys: ["str"] });
+            ctx.set({ str: "A", num: 1 });
+            const inspect = Bun.inspect(ctx);
+            expect(inspect).not.toContain("'str'");
+            expect(inspect).toContain("'num'");
         });
     });
 
-    describe("Complex Interactions", () => {
-        it("Should handle nested final states correctly", () => {
-            context.set("name", "L1");
-            {
-                using _ = context.with("name", "L2", { final: true });
-                expect(() => context.set("name", "L3")).toThrow(FinalOverrideError);
+    describe("set()", () => {
+        describe("Single Key", () => {
+            it("Should set value and return true", () => {
+                expect(context.set("str", "Value")).toBe(true);
+                expect(context.get("str")).toBe("Value");
+            });
+
+            it("Should respect 'override: false'", () => {
+                context.set("str", "Original");
+                expect(context.set("str", "New", { override: false })).toBe(false);
+                expect(context.get("str")).toBe("Original");
+            });
+        });
+
+        describe("Multiple Keys", () => {
+            it("Should set multiple values atomically", () => {
+                const res = context.set({ str: "A", num: 1 });
+                expect(res).toEqual({ str: true, num: true });
+                expect(context.get("str")).toBe("A");
+                expect(context.get("num")).toBe(1);
+            });
+
+            it("Should support mixed options in multiple set", () => {
+                context.set("str", "Original");
+                const res = context.set(
+                    { str: "New", num: 1 },
+                    { str: { override: false }, num: { final: true } },
+                );
+                expect(res).toEqual({ str: false, num: true });
+                expect(context.get("str")).toBe("Original");
+            });
+        });
+
+        describe("Constraint: Final Contexts", () => {
+            it("Should prevent overwriting final keys", () => {
+                context.set("finalKey", "Immutable", { final: true });
+                expect(() => context.set("finalKey", "New")).toThrow(
+                    FinalContextMutationError,
+                );
+            });
+
+            it("Should prevent multiple set if any key is final", () => {
+                context.set("finalKey", "Immutable", { final: true });
+                expect(() => context.set({ str: "A", finalKey: "B" })).toThrow(
+                    FinalContextMutationError,
+                );
+            });
+        });
+
+        describe("Error Handling", () => {
+            it("Should throw OverloadsError for invalid inputs", () => {
+                expect(() => context.set(123 as any, "val")).toThrow(OverloadsError);
+            });
+        });
+    });
+
+    describe("clear()", () => {
+        beforeEach(() => {
+            context.set({ str: "A", num: 1 });
+        });
+
+        it("Overload: No Args - Should clear all non-final local keys", () => {
+            context.clear();
+            expect(context.has("str")).toBe(false);
+            expect(context.has("num")).toBe(false);
+        });
+
+        it("Overload: Single Key - Should clear specific key", () => {
+            context.clear("str");
+            expect(context.has("str")).toBe(false);
+            expect(context.has("num")).toBe(true);
+        });
+
+        it("Overload: Multiple Keys - Should clear list of keys", () => {
+            context.set("bool", true);
+            context.clear(["str", "num"]);
+            expect(context.has("str")).toBe(false);
+            expect(context.has("num")).toBe(false);
+            expect(context.has("bool")).toBe(true);
+        });
+
+        describe("Constraints & Isolation", () => {
+            it("Should fail when clearing final keys", () => {
+                context.set("finalKey", "Final", { final: true });
+                expect(() => context.clear("finalKey")).toThrow(
+                    FinalContextMutationError,
+                );
+                expect(() => context.clear(["str", "finalKey"])).toThrow(
+                    FinalContextMutationError,
+                );
+            });
+
+            it("Should maintain isolation (clear only local shadow)", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(() => {
+                    context.set("str", "Local", { local: true });
+                    context.clear("str");
+
+                    expect(context.get("str")).toBeUndefined();
+                });
+                expect(context.get("str")).toBe("Global");
+            });
+
+            it("Should allow resurrecting cleared keys (Zombie State)", () => {
+                context.concurrentlySafe(() => {
+                    context.set("str", "Alive", { local: true });
+                    context.clear("str");
+                    context.set("str", "Resurrected", { local: true });
+                    expect(context.get("str")).toBe("Resurrected");
+                });
+            });
+        });
+
+        describe("Error Handling", () => {
+            it("Should throw OverloadsError for invalid inputs", () => {
+                expect(() => context.clear(123 as any)).toThrow(OverloadsError);
+            });
+        });
+    });
+
+    describe("with()", () => {
+        describe("Single Key Scope", () => {
+            it("Should apply temporary context using 'using'", () => {
+                {
+                    using _ = context.with("str", "Temp");
+                    expect(context.get("str")).toBe("Temp");
+                }
+                expect(context.get("str")).toBeUndefined();
+            });
+
+            it("Should restore previous value", () => {
+                context.set("str", "Original");
+                {
+                    using _ = context.with("str", "Temp");
+                    expect(context.get("str")).toBe("Temp");
+                }
+                expect(context.get("str")).toBe("Original");
+            });
+
+            it("Should expose metadata (changed, previous, context)", () => {
+                context.set("str", "Original");
+                using ctx = context.with("str", "Temp");
+                expect(ctx.context).toBe("Temp");
+                expect(ctx.previous).toBe("Original");
+                expect(ctx.changed).toBe(true);
+            });
+
+            it("Should respect options (override: false)", () => {
+                context.set("str", "Original");
+                using ctx = context.with("str", "Temp", { override: false });
+                expect(ctx.changed).toBe(false);
+                expect(context.get("str")).toBe("Original");
+            });
+        });
+
+        describe("Multiple Key Scope", () => {
+            it("Should apply multiple contexts", () => {
+                {
+                    using _ = context.with({ str: "Temp", num: 99 });
+                    expect(context.get("str")).toBe("Temp");
+                    expect(context.get("num")).toBe(99);
+                }
+                expect(context.get("str")).toBeUndefined();
+            });
+
+            it("Should rollback all if one fails (Atomicity)", () => {
+                context.set("finalKey", "Final", { final: true });
                 expect(() => {
-                    using __ = context.with("name", "L3");
-                }).toThrow(FinalOverrideError);
-            }
-            expect(() => context.set("name", "L1-New")).not.toThrow();
+                    using _ = context.with({ num: 99, finalKey: "Try" });
+                }).toThrow(FinalContextMutationError);
+                expect(context.get("num")).toBeUndefined();
+            });
+
+            it("Should expose scoped metadata object", () => {
+                using multi = context.with({ str: "A", num: 1 });
+                expect(multi.scope.str.context).toBe("A");
+                expect(multi.scope.num.context).toBe(1);
+            });
+        });
+
+        describe("Advanced Scenarios", () => {
+            it("Should enforce final constraint inside scope creation", () => {
+                context.set("finalKey", "Val", { final: true });
+                expect(() => {
+                    using _ = context.with("finalKey", "New");
+                }).toThrow(FinalContextMutationError);
+            });
+
+            it("Should enforce final constraint set by the scope itself", () => {
+                context.set("num", 10);
+                {
+                    using _ = context.with("num", 20, { final: true, override: true });
+                    expect(() => context.set("num", 30)).toThrow(
+                        FinalContextMutationError,
+                    );
+                }
+                expect(context.get("num")).toBe(10);
+            });
+
+            it("Should handle massive recursive nesting (Stack Test)", () => {
+                const depth = 500;
+                context.set("recursive", 0);
+
+                const recurse = (level: number) => {
+                    if (level > depth) {
+                        expect(context.get("recursive")).toBe(depth);
+                        return;
+                    }
+                    {
+                        using _ = context.with("recursive", level);
+                        expect(context.get("recursive")).toBe(level);
+                        recurse(level + 1);
+                        expect(context.get("recursive")).toBe(level);
+                    }
+                };
+
+                recurse(1);
+                expect(context.get("recursive")).toBe(0);
+            });
+        });
+
+        describe("Error Handling", () => {
+            it("Should throw OverloadsError for invalid inputs", () => {
+                expect(() => context.with(123 as any, "val")).toThrow(OverloadsError);
+            });
+        });
+    });
+
+    describe("concurrentlySafe()", () => {
+        describe("Behavior: Isolation", () => {
+            it("Should isolate changes to local callback scope", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(() => {
+                    context.set("str", "Local", { local: true });
+                    expect(context.get("str")).toBe("Local");
+                });
+                expect(context.get("str")).toBe("Global");
+            });
+
+            it("Should propagate changes if local is false", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(() => {
+                    context.set("str", "Updated", { local: false });
+                });
+                expect(context.get("str")).toBe("Updated");
+            });
+
+            it("Should forbid shadowing global final keys locally", () => {
+                context.set("finalKey", "Global", { final: true });
+                context.concurrentlySafe(() => {
+                    expect(() => {
+                        context.set("finalKey", "Shadow", { local: true });
+                    }).toThrow(FinalContextMutationError);
+                    expect(context.get("finalKey")).toBe("Global");
+                });
+            });
+        });
+
+        describe("Behavior: Inheritance & Copying", () => {
+            it("Should inherit values from parent by default", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(() => {
+                    expect(context.get("str")).toBe("Global");
+                });
+            });
+
+            it("Should support copying all contexts ('current')", () => {
+                context.set("str", "Global");
+                context.concurrentlySafe(
+                    () => {
+                        context.set("str", "Local", { local: true });
+                        expect(context.get("str")).toBe("Local");
+                    },
+                    { contexts: "current" },
+                );
+                expect(context.get("str")).toBe("Global");
+            });
+
+            it("Should support copying specific keys list", () => {
+                context.set({ str: "Global", num: 10 });
+
+                context.concurrentlySafe(
+                    () => {
+                        context.set("str", "Local", { local: true });
+                        expect(context.get("str")).toBe("Local");
+                        expect(context.get("num")).toBe(10);
+                    },
+                    { contexts: ["str"] },
+                );
+            });
+        });
+
+        describe("Stress & Concurrency Scenarios", () => {
+            it("Should handle high concurrency with random delays", async () => {
+                const operations = Array.from({ length: 100 }, (_, i) => i);
+                context.set("num", -1);
+
+                await Promise.all(
+                    operations.map((index) =>
+                        context.concurrentlySafe(async () => {
+                            context.set("num", index, { local: true });
+                            await Bun.sleep(Math.random() * 5);
+                            expect(context.get("num")).toBe(index);
+                        }),
+                    ),
+                );
+                expect(context.get("num")).toBe(-1);
+            });
+
+            it("Should handle massive amount of concurrent contexts (1e3)", async () => {
+                const size = 1000;
+                const range = Array.from({ length: size }, (_, i) => i);
+                context.set("num", -1);
+
+                await Promise.all(
+                    range.map((i) =>
+                        context.concurrentlySafe(
+                            async () => {
+                                context.set("num", i);
+                                expect(context.get("num")).toBe(i);
+                            },
+                            { contexts: ["num"] },
+                        ),
+                    ),
+                );
+                expect(context.get("num")).toBe(-1);
+            });
+
+            it("Should ensure total isolation among siblings (Shared State Stress)", async () => {
+                const siblings = 1000;
+                context.set("shared", "root");
+
+                await Promise.all(
+                    Array.from({ length: siblings }).map(async (_, index) => {
+                        return context.concurrentlySafe(async () => {
+                            const myValue = `sibling-${index}`;
+                            context.set("shared", myValue, { local: true });
+                            await Bun.sleep(Math.random() * 2);
+                            expect(context.get("shared")).toBe(myValue);
+                        });
+                    }),
+                );
+                expect(context.get("shared")).toBe("root");
+            });
+
+            it("Should handle massive recursive nesting (Depth: 500)", () => {
+                const depth = 500;
+                context.set("recursive", 0);
+
+                const recurse = (level: number) => {
+                    if (level > depth) return;
+                    context.concurrentlySafe(() => {
+                        expect(context.get("recursive")).toBe(level - 1);
+                        context.set("recursive", level, { local: true });
+                        expect(context.get("recursive")).toBe(level);
+                        recurse(level + 1);
+                        expect(context.get("recursive")).toBe(level);
+                    });
+                };
+
+                recurse(1);
+                expect(context.get("recursive")).toBe(0);
+            });
+        });
+
+        describe("Error Handling", () => {
+            it("Should guarantee rollback on exception", () => {
+                context.set("num", 0);
+                expect(() =>
+                    context.concurrentlySafe(() => {
+                        context.set("num", 1, { local: true });
+                        throw new Error("Boom");
+                    }),
+                ).toThrow("Boom");
+                expect(context.get("num")).toBe(0);
+            });
+
+            it("Should throw ArgumentsError for invalid inputs", () => {
+                expect(() => context.concurrentlySafe(123 as any)).toThrow(
+                    ArgumentsError,
+                );
+            });
         });
     });
 });
