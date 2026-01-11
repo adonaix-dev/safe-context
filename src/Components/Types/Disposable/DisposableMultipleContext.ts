@@ -1,6 +1,7 @@
 import type { SafeContext } from "it";
 
 import type { ContextDictionary } from "~/Types/ContextDictionary";
+import type { DisposableContext } from "~/Types/Disposable/DisposableContext";
 import type { WithMultipleContextOptions } from "~/Types/With/WithMultipleContextOptions";
 import type { WithMultipleContextScope } from "~/Types/With/WithMultipleContextScope";
 
@@ -13,8 +14,9 @@ interface DisposableMultipleContext<
     Options extends WithMultipleContextOptions<Arg>,
 > extends Disposable {
     /**
-     * An object containing the disposable details for each context
-     * key that was set.
+     * An object containing the disposable details (a
+     * {@link DisposableContext `DisposableContext`} object) for each
+     * context key that was set.
      */
     readonly scope: WithMultipleContextScope<Arg, Options>;
 }

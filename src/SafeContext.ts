@@ -364,7 +364,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *   context marked as {@link SetContextOptions.final `final`}.
      * @throws {MissingDependencyError} If the
      *   {@link Symbol.dispose `Symbol.dispose`} feature is not
-     *   available in the JavaScript runtime.
+     *   available in this runtime.
      * @throws {OverloadsError} If no overload matches the provided
      *   arguments.
      */
@@ -391,7 +391,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @throws {MissingDependencyError} If the
      *   {@link Symbol.dispose `Symbol.dispose`} or the
      *   {@link DisposableStack `DisposableStack`} features are not
-     *   available in the JavaScript runtime.
+     *   available in the runtime.
      * @throws {OverloadsError} If no overload matches the provided
      *   arguments.
      */
@@ -412,8 +412,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      * @returns A partial dictionary with the current values.
      */
     snapshot(): ContextSnapshot<Dictionary> {
-        const hideKeys = this.#hideKeys;
-        if (hideKeys === true) {
+        if (this.#hideKeys === true) {
             return {};
         }
 
@@ -461,7 +460,7 @@ class SafeContext<Dictionary extends ContextDictionary> {
      *
      * @param key The key to clear.
      * @throws {FinalContextMutationError} If attempting to clear a
-     *   context marked as {@link SetContextOptions.final `final`}.
+     *   context marked as "final".
      * @throws {OverloadsError} If no overload matches the provided
      *   arguments.
      */

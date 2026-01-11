@@ -12,6 +12,10 @@ class FinalContextMutationError extends SafeContextError {
 
     private readonly mutation!: FinalContextMutationType;
 
+    /**
+     * @param mutation The type of mutation attempt that caused the
+     *   error.
+     */
     constructor(mutation: FinalContextMutationType) {
         super(
             `cannot ${mutation} context. The context is set and marked as final, and final contexts cannot be mutated`,
@@ -26,12 +30,13 @@ class FinalContextMutationError extends SafeContextError {
     }
 
     /**
-     * Attaches the key of the context that caused the error to the
+     * Attaches a key of the context that caused the error to the
      * error message.
      *
      * @param key The key of the context that could not be mutated.
      *
-     * @returns The error instance for chaining.
+     * @returns This error instance, updated with the key specified
+     *   for throwing.
      */
     withKey(key: string): this {
         return (
