@@ -2,7 +2,7 @@
     "name": "safe-context",
     "version": "0.1.0",
     "type": "module",
-    "description": "Tame race conditions in Node.js! A zero-dependency, type-safe context manager for concurrent and synchronous state management.",
+    "description": "Tame race conditions in Node.js! A (almost) zero-dependency, type-safe context manager for concurrent and synchronous state management.",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/adonaix-dev/safe-context.git"

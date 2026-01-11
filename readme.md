@@ -340,8 +340,8 @@ Error thrown when a required runtime feature is not available.
 
 ### [`ArgumentsError`](/readme#argumentserror)
 
-Error thrown by `zod-guardians` when the provided arguments do not match the runtime type validation schemas.
+Error thrown by [`zod-guardians`](https://www.npmjs.com/package/zod-guardians) when the provided arguments do not match the runtime type validation schemas.
 
 ### [`OverloadsError`](/readme#overloadserror)
 
-Error thrown by `zod-guardians` when using an overloaded method (e.g., `get`, `set`, `with`), and the provided arguments do not match any of the available signatures.
+Error thrown by [`zod-guardians`](https://www.npmjs.com/package/zod-guardians) when using an overloaded method (e.g., `get`, `set`, `with`), and the provided arguments do not match any of the available signatures.
