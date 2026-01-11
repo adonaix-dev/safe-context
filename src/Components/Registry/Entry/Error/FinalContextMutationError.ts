@@ -14,7 +14,7 @@ class FinalContextMutationError extends SafeContextError {
 
     constructor(mutation: FinalContextMutationType) {
         super(
-            `cannot ${mutation} context. The context is set and marked as final, and final contexts cannot be overriden`,
+            `cannot ${mutation} context. The context is set and marked as final, and final contexts cannot be mutated`,
         );
 
         Object.defineProperty(this, "mutation", {
@@ -35,7 +35,7 @@ class FinalContextMutationError extends SafeContextError {
      */
     withKey(key: string): this {
         return (
-            (this.message = `cannot ${this.mutation} context with key '${key}'. This context is set and marked as final, and final contexts cannot be overriden`),
+            (this.message = `cannot ${this.mutation} context with key '${key}'. This context is set and marked as final, and final contexts cannot be mutated`),
             this
         );
     }

@@ -26,4 +26,6 @@ export { SafeContextError } from "~/Error/SafeContextError";
 export { FinalContextMutationType } from "~/Registry/Entry/Error/FinalContextMutationType";
 export { FinalContextMutationError } from "~/Registry/Entry/Error/FinalContextMutationError";
 
+export { ArgumentsError, OverloadsError } from "zod-guardians";
+
 export { SafeContext } from "./SafeContext";
