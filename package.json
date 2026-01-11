@@ -40,7 +40,7 @@
         "prepublishOnly": "bun format && bun test && bun run build"
     },
     "dependencies": {
-        "zod": "^4.2.1",
+        "zod": "^4.3.5",
         "zod-guardians": "^0.1.1"
     },
     "devDependencies": {
@@ -56,7 +56,7 @@
         "prettier": "^3.7.4",
         "prettier-plugin-jsdoc": "^1.8.0",
         "prettier-plugin-pkg": "^0.21.2",
-        "rollup": "^4.54.0",
+        "rollup": "^4.55.1",
         "rollup-plugin-dts": "^6.3.0",
         "rollup-plugin-prettier": "^4.1.2",
         "source-map-js": "^1.2.1",
