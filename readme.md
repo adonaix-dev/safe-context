@@ -47,17 +47,17 @@ It manages execution context through a hierarchical registry system, allowing va
 
 - **`create<Dictionary>(options?)`**
 
-    Creates a new [`SafeContext`](/readme#safecontextdictionary) instance.
+    Creates a new [`SafeContext`](/readme.md#safecontextdictionary) instance.
 
     | Parameter          | Type                           | Description                                                                                                                                                                                                                  |
     | ------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
     | `options`          | `SafeContextOptions`           | _(Optional)_ Configuration for the new instance.                                                                                                                                                                             |
     | `options.hideKeys` | `true \| (keyof Dictionary)[]` | _(Optional)_ Hides specified keys from being shown when the instance is inspected (e.g., via `console.log`) or captured in the snapshot. If `true`, all keys are hidden; or if an array of keys, only those keys are hidden. |
 
-    **Returns:** [`SafeContext<Dictionary>`](/readme#safecontextdictionary)
+    **Returns:** [`SafeContext<Dictionary>`](/readme.md#safecontextdictionary)
 
     **Throws:**
-    - [`ArgumentsError`](/readme#argumentserror): If `options.hideKeys` is not `true` or of type `string[]`.
+    - [`ArgumentsError`](/readme.md#argumentserror): If `options.hideKeys` is not `true` or of type `string[]`.
 
 #### Instance Methods
 
@@ -72,7 +72,7 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** `true` if the key exists in the registry, `false` otherwise.
 
     **Throws:**
-    - [`ArgumentsError`](/readme#argumentserror): If `key` is not a string.
+    - [`ArgumentsError`](/readme.md#argumentserror): If `key` is not a string.
 
 - **`get(key, options?)`**
 
@@ -87,7 +87,7 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** The context value, or `undefined` if it's not set and no `options.supply` function is provided.
 
     **Throws:**
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`get(keys, options?)`**
 
@@ -102,7 +102,7 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** An object containing the retrieved key-value pairs.
 
     **Throws:**
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`require(key)`**
 
@@ -116,8 +116,8 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** The context value.
 
     **Throws:**
-    - [`ContextNotFoundError`](/readme#contextnotfounderror): If the context is not found.
-    - [`ArgumentsError`](/readme#argumentserror): If `key` is not a string or if `message` is passed but it's not a string.
+    - [`ContextNotFoundError`](/readme.md#contextnotfounderror): If the context is not found.
+    - [`ArgumentsError`](/readme.md#argumentserror): If `key` is not a string or if `message` is passed but it's not a string.
 
 - **`set(key, context, options?)`**
 
@@ -135,8 +135,8 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** `true` if the context was successfully set, or `false` otherwise.
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to override a context marked as "final".
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to override a context marked as "final".
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`set(contexts, options?)`**
 
@@ -153,8 +153,8 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** An object containing the result of each individual set operation.
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to override a context marked as "final".
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to override a context marked as "final".
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`with(key, context, options?)`**
 
@@ -172,9 +172,9 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** A `DisposableContext` object to be used in a `using` statement.
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to override a context marked as "final".
-    - [`MissingDependencyError`](/readme#missingdependencyerror): If the `Symbol.dispose` feature is not available in the runtime.
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to override a context marked as "final".
+    - [`MissingDependencyError`](/readme.md#missingdependencyerror): If the `Symbol.dispose` feature is not available in the runtime.
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`with(contexts, options?)`**
 
@@ -191,9 +191,9 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** A `DisposableMultipleContext` object to be used in a `using` statement.
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to override any context marked as "final".
-    - [`MissingDependencyError`](/readme#missingdependencyerror): If the `Symbol.dispose` or the `DisposableStack` features are not available in the runtime.
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to override any context marked as "final".
+    - [`MissingDependencyError`](/readme.md#missingdependencyerror): If the `Symbol.dispose` or the `DisposableStack` features are not available in the runtime.
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`snapshot()`**
 
@@ -214,7 +214,7 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** The value returned by the `callback` function.
 
     **Throws:**
-    - [`ArgumentsError`](/readme#argumentserror): If `callback` is not a function or if `options` properties types are incorrect.
+    - [`ArgumentsError`](/readme.md#argumentserror): If `callback` is not a function or if `options` properties types are incorrect.
 
 - **`clear()`**
 
@@ -233,8 +233,8 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** `void`
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to clear a context marked as "final".
-    - [`OverloadsError`](/readme#overloadserror): If no overload matches the provided arguments.
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to clear a context marked as "final".
+    - [`OverloadsError`](/readme.md#overloadserror): If no overload matches the provided arguments.
 
 - **`clear(keys)`**
 
@@ -247,7 +247,7 @@ It manages execution context through a hierarchical registry system, allowing va
     **Returns:** `void`
 
     **Throws:**
-    - [`FinalContextMutationError`](/readme#finalcontextmutationerror): If attempting to clear a context marked as "final".
+    - [`FinalContextMutationError`](/readme.md#finalcontextmutationerror): If attempting to clear a context marked as "final".
 
 ### `DisposableContext<Type, Options>`
 
@@ -271,9 +271,9 @@ An object returned by `with()` for multiple contexts. It is meant to be used wit
 
 #### Properties
 
-| Property | Type                                            | Description                                                                                                                                            |
-| -------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scope`  | `WithMultipleContextScope<Dictionary, Options>` | An object containing the disposable details (a [`DisposableContext`](/readme#disposablecontexttype-options) object) for each context key that was set. |
+| Property | Type                                            | Description                                                                                                                                               |
+| -------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scope`  | `WithMultipleContextScope<Dictionary, Options>` | An object containing the disposable details (a [`DisposableContext`](/readme.md#disposablecontexttype-options) object) for each context key that was set. |
 
 ### `SafeContextError`
 
@@ -338,10 +338,10 @@ Error thrown when a required runtime feature is not available.
     - `MissingDependencyError`: If any of the specified dependencies cannot be found.
     - `ReferenceError`: If the global scope object cannot be resolved.
 
-### [`ArgumentsError`](/readme#argumentserror)
+### [`ArgumentsError`](/readme.md#argumentserror)
 
 Error thrown by [`zod-guardians`](https://www.npmjs.com/package/zod-guardians) when the provided arguments do not match the runtime type validation schemas.
 
-### [`OverloadsError`](/readme#overloadserror)
+### [`OverloadsError`](/readme.md#overloadserror)
 
 Error thrown by [`zod-guardians`](https://www.npmjs.com/package/zod-guardians) when using an overloaded method (e.g., `get`, `set`, `with`), and the provided arguments do not match any of the available signatures.
